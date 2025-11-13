@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Text Simplifier — WoZ v3 (English + Telugu)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .df-word {
+            display: inline;
+        }
+
+        .df-head {
+            letter-spacing: 0.003em;
+        }
+
+        /* character assist classes: subtle styling so assisted characters are visible */
+        .df-char {
+            padding: 0 0.06em;
+            border-radius: 0.12em;
+        }
+
+        .df-ta,
+        .df-taa,
+        .df-ti,
+        .df-tu,
+        .df-tva {
+            background: rgba(99, 102, 241, 0.04);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-gradient-to-b from-white to-violet-50 p-4 sm:p-8">
+    <div id="root"></div>
+
+    <!-- React 18 + ReactDOM via CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel to allow inline JSX editing -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- ================= APP CODE ================= -->
+    <script type="text/babel">
+        const { useEffect, useMemo, useRef, useState } = React;
+
+        // ---------------- Helpers ----------------
+        const LANGS = [
+            { code: "en", label: "English", uiLabel: "English", ttsLabel: "Read aloud" },
+            { code: "te", label: "తెలుగు", uiLabel: "తెలుగు", ttsLabel: "జోరుగా చదవండి" },
+        ];
+
+        const TRANSLATIONS = {
+            en: {
+                docTitle: "Text Simplifier — WoZ v3 (shareable)",
+                prototype: "Prototype",
+                subtitle: "Language-aware, questionnaire-guided summarization • TTS • Reading assists • WoZ",
+                chooseLanguage: "Choose your language",
+                welcome: "Welcome",
+                continueGuest: "Continue as guest",
+                login: "Log in",
+                createAccount: "Create account",
+                guestHint: "Guest mode saves your settings only on this device.",
+                whatsHarder: "What’s harder?",
+                readingText: "Reading the text",
+                readingHint: "letters too small / crowded",
+                understanding: "Understanding the meaning",
+                understandingHint: "long sentences / jargon",
+                getsInTheWay: "What gets in the way? (choose all that apply)",
+                obstacles: {
+                    small: "Small text",
+                    tight: "Tight line spacing",
+                    dense: "Dense paragraphs",
+                    complex: "Complex words",
+                    long: "Long sentences",
+                    busy: "Busy layout",
+                },
+                previewSettings: "Preview your comfy settings",
+                textSize: "Text size: {value}px",
+                lineSpacing: "Line spacing: {value}",
+                letterSpacing: "Letter spacing: {value}%",
+                readAloudQuestion: "Would you like it read aloud on the results screen?",
+                back: "Back",
+                skip: "Skip",
+                next: "Next",
+                addYourText: "Add your text",
+                pasteText: "Paste text",
+                uploadFile: "Upload file",
+                pastePlaceholder: "Paste your text here…",
+                uploadHint: "(Prototype supports .txt files only)",
+                loaded: "Loaded:",
+                summaryLength: "Summary length: {value} words",
+                simplifyVocab: "Simplify vocabulary",
+                splitLongSentences: "Split long sentences",
+                simplifyAction: "Simplify",
+                workingOnIt: "Working on it…",
+                progressUploading: "Uploading",
+                progressAnalyzing: "Analyzing",
+                progressSimplifying: "Simplifying",
+                progressApplying: "Applying preferences",
+                progressFinalizing: "Finalizing",
+                detectedLanguage: "Detected language:",
+                yourSimplifiedText: "Your simplified text",
+                themeLight: "Light",
+                themeSepia: "Sepia",
+                themeDark: "Dark",
+                original: "Original",
+                simplified: "Simplified",
+                empty: "(Empty)",
+                noOutput: "(No output) Paste some text and click Simplify.",
+                readingAssists: "Reading assists",
+                enableAssists: "Enable assists (bold first varṇa)",
+                firstVarna: "First varṇa to bold: {value}",
+                hindiCharAssists: "Telugu character assists",
+                assistsDescription: "Assists bold the first few varṇa (graphemes) of each word, and — for Telugu — wrap select characters so devs can plug in alt glyphs.",
+                readAloud: "Read aloud",
+                resume: "Resume",
+                pause: "Pause",
+                stop: "Stop",
+                copy: "Copy",
+                downloadTxt: "Download .txt",
+                startOver: "Start over",
+                currentLanguage: "Current language:",
+                wizardHint: "Wizard: press Shift+W • {value}",
+                wizardPanel: "Wizard Panel (Shift+W)",
+                close: "Close",
+                presetReading: "Preset: Reading",
+                presetUnderstanding: "Preset: Understanding",
+                toggleOriginal: "Toggle Original",
+                themeSepiaButton: "Theme: Sepia",
+                wozPlaceholder: "Paste a prewritten summary to replace output…",
+                replaceSimplified: "Replace simplified",
+                useComputed: "Use computed output",
+            },
+            te: {
+                docTitle: "టెక్ట్స్ సింప్లిఫయర్ — WoZ v3 (షెయరబుల్)",
+                prototype: "ప్రోటోటైప్",
+                subtitle: "భాష-ఆధారిత, ప్రశ్నావళి-మార్గదర్శక సంక్షేపం • TTS • పఠన సహాయాలు • WoZ",
+                chooseLanguage: "మీ భాషను ఎంచుకోండి",
+                welcome: "స్వాగతం",
+                continueGuest: "అతిథిగా కొనసాగండి",
+                login: "లాగిన్",
+                createAccount: "ఖాతా సృష్టించు",
+                guestHint: "అతిథి మోడ్ మీ సెట్టింగ్స్‌ను ఈ పరికరంలోనే నిలుపుతుంది.",
+                whatsHarder: "ఏది కష్టం?",
+                readingText: "పాఠ్యం చదవడం",
+                readingHint: "అక్షరాలు చిన్నగా/ఘనంగా ఉన్నాయి",
+                understanding: "అర్థం చేసుకోవడం",
+                understandingHint: "పెద్ద వాక్యాలు / జార్గన్",
+                getsInTheWay: "ఏది అడ్డంగా ఉంది? (అన్ని ఎంచుకోండి)",
+                obstacles: {
+                    small: "చిన్న టెక్స్ట్",
+                    tight: "ఘన లైన్ స్పేసింగ్",
+                    dense: "ఘన పేరాగ్రాఫ్‌లు",
+                    complex: "సంక్లిష్ట పదాలు",
+                    long: "పొడవైన వాక్యాలు",
+                    busy: "బిజీ లేఅవుట్",
+                },
+                previewSettings: "మీ సౌకర్యాత్మక సెట్టింగుల ప్రివ్యూ",
+                textSize: "టెక్స్ట్ పరిమాణం: {value}px",
+                lineSpacing: "లైన్ స్పేసింగ్: {value}",
+                letterSpacing: "అక్షరాల మధ్య ఖాళీ: {value}%",
+                readAloudQuestion: "ఫలితాల స్క్రీన్‌లో దీన్ని వాయిస్ఆઉట్ చేయమనుకుంటున్నారా?",
+                back: "వెనుకకి",
+                skip: "దాటివేయి",
+                next: "తరువాత",
+                addYourText: "మీ టెక్స్ట్ జత చేయండి",
+                pasteText: "పేస్ట్ టెక్స్ట్",
+                uploadFile: "ఫైల్ అప్‌లోడ్ చేయండి",
+                pastePlaceholder: "ఇక్కడ మీ టెక్స్ట్ పేస్ట్ చేయండి…",
+                uploadHint: "(ప్రోటోటైప్ .txt ఫైల్స్ మాత్రమే సపోర్ట్ చేస్తుంది)",
+                loaded: "లోడ్ అయ్యింది:",
+                summaryLength: "సారాంశ పొడవు: {value} పదాలు",
+                simplifyVocab: "పదజాలాన్ని సరళీకరించు",
+                splitLongSentences: "పొడవైన వాక్యాలను విడగొట్టు",
+                simplifyAction: "సరళీకరించు",
+                workingOnIt: "పని జరుగుతుంది…",
+                progressUploading: "అప్‌లోడ్ అవుతుంది",
+                progressAnalyzing: "విశ్లేషిస్తున్నాం",
+                progressSimplifying: "సరళీకరించు చేస్తున్నాం",
+                progressApplying: "ప్రాధాన్యాల్ని వర్తింపజేస్తున్నాం",
+                progressFinalizing: "अంతిమ రూపం",
+                detectedLanguage: "తెలిసిన భాష:",
+                yourSimplifiedText: "మీ సరళీకృత టెక్స్ట్",
+                themeLight: "లైట్",
+                themeSepia: "సెపియా",
+                themeDark: "డార్క్",
+                original: "మూలం",
+                simplified: "సరళీకృత",
+                empty: "(ఖాళీ)",
+                noOutput: "(ఏ అవుట్‌పుట్ లేదు) టెక్స్ట్ పేస్ట్ చేసి 'సరళీకరించు' పై క్లిక్ చేయండి.",
+                readingAssists: "పఠన సహాయాలు",
+                enableAssists: "సహాయాలను సక్రియం చేయండి (మొదటి varṇa బోల్డ్ చేయండి)",
+                firstVarna: "మొదటి varṇa బోల్డ్ చేయండి: {value}",
+                hindiCharAssists: "తెలుగు అక్షర సహాయాలు",
+                assistsDescription: "సహాయాలు ప్రతి పదంలోని మొదటి కొన్ని varṇaలను బోల్డ్ చేస్తాయి, మరియు — తెలుగు కోసం — నిర్దిష్ట అక్షరాలను ర్యాప్ చేస్తాయి.",
+                readAloud: "పఠనాన్ని ఆడించు",
+                resume: "పునఃప్రారంభించు",
+                pause: "విరామం",
+                stop: "నిలిచివేయి",
+                copy: "కాపీ",
+                downloadTxt: "డౌన్‌లోడ్ .txt",
+                startOver: "మళ్లీ ప్రారంభించు",
+                currentLanguage: "ప్రస్తుత భాష:",
+                wizardHint: "విజార్డ్: Shift+W నొక్కండి • {value}",
+                wizardPanel: "విజార్డ్ ప్యానెల్ (Shift+W)",
+                close: "మూసివేయి",
+                presetReading: "ప్రీసెట్: పఠనం",
+                presetUnderstanding: "ప్రీసెట్: అర్థం",
+                toggleOriginal: "మూలాన్ని టాగల్ చేయి",
+                themeSepiaButton: "థీమ్: సెపియా",
+                wozPlaceholder: "ఫలితాన్ని మార్చడానికి ఇక్కడ ఒక ముందుగా రాసిన సారాంశాన్ని పేస్ట్ చేయండి…",
+                replaceSimplified: "సరళీకృతాన్ని మార్చు",
+                useComputed: "లెక్కించబడిన అవుట్‌పుట్ ఉపయోగించు",
+            }
+        };
+
+        function t(key, vars = {}) {
+            const langCode = (window.__app_lang_code__ || 'en');
+            const parts = key.split('.');
+            let val = TRANSLATIONS[langCode] ?? TRANSLATIONS['en'];
+            for (const p of parts) { if (val && val[p] !== undefined) val = val[p]; else { val = undefined; break; } }
+            if (val === undefined) {
+                // fallback to english
+                val = TRANSLATIONS['en'];
+                for (const p of parts) { if (val && val[p] !== undefined) val = val[p]; else { val = undefined; break; } }
+            }
+            if (typeof val !== 'string') return '';
+            return val.replace(/\{(\w+)\}/g, (_, name) => (vars[name] !== undefined ? String(vars[name]) : '{' + name + '}'));
+        }
+
+        const THEME_CLASSES = {
+            light: "bg-white text-zinc-900",
+            sepia: "bg-[#F4ECD8] text-zinc-900",
+            dark: "bg-zinc-900 text-zinc-100",
+        };
+
+        const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+        const cx = (...arr) => arr.filter(Boolean).join(" ");
+
+        function simplifyText(original, targetWords, opts) {
+            if (!original) return "";
+            let txt = original.replace(/\s+/g, " ").replace(/\[[^\]]*\]|\([^)]*\)/g, "").trim();
+            let sentences = txt.split(/(?<=[\.!\?])\s+/);
+            if (opts.splitLongSentences) {
+                sentences = sentences.flatMap(s => {
+                    if (s.length < 140) return [s];
+                    return s.split(/,\s+/).map((chunk, i, arr) => (i < arr.length - 1 ? chunk + "." : chunk));
+                });
+            }
+            if (opts.simplifyVocab) {
+                const map = { approximately: "about", therefore: "so", consequently: "so", demonstrate: "show", however: "but", furthermore: "also", nevertheless: "still" };
+                sentences = sentences.map(s => s.replace(/\b([a-z]{4,})\b/gi, m => map[m.toLowerCase()] ?? m));
+            }
+            const words = sentences.join(" ").split(/\s+/);
+            const target = clamp(Math.round(targetWords), 10, 600);
+            const trimmed = words.slice(0, target).join(" ");
+            return trimmed + (words.length > target ? "…" : "");
+        }
+
+        async function readTextFile(file) {
+            if (!file.name.toLowerCase().endsWith(".txt")) throw new Error("For this prototype, please upload a .txt file.");
+            return await file.text();
+        }
+
+        // ---------- Dyslexia/ADHD assist rendering ----------
+        function makeSegmenter(langCode) {
+            try { return new Intl.Segmenter(langCode, { granularity: "grapheme" }); }
+            catch { return new Intl.Segmenter("en", { granularity: "grapheme" }); }
+        }
+        function toGraphemes(text, seg) {
+            const it = seg.segment(text)[Symbol.iterator]();
+            const out = []; let n = it.next();
+            while (!n.done) { out.push(n.value.segment || ""); n = it.next(); }
+            return out;
+        }
+
+        // Telugu character assists map (keep subtle classes)
+        const TELUGU_CHAR_ASSIST = new Map([
+            ["అ", "df-ta"], ["ఆ", "df-taa"], ["ఇ", "df-ti"], ["ఉ", "df-tu"], ["వ", "df-tva"],
+        ]);
+
+        const CHAR_ASSISTS_BY_LANG = {
+            te: TELUGU_CHAR_ASSIST,
+        };
+
+        function renderAssistiveNodes(text, langCode, opts) {
+            const seg = makeSegmenter(langCode);
+            const tokens = text.split(/(\s+)/);
+            const nodes = tokens.map((tok, i) => {
+                if (/^\s+$/.test(tok)) return <span key={"sp-" + i}>{tok}</span>;
+                const clusters = toGraphemes(tok, seg);
+                const deco = (g, j) => {
+                    if (opts.enableCharAssist) {
+                        const map = CHAR_ASSISTS_BY_LANG[langCode];
+                        if (map && map.has(g)) {
+                            const cls = map.get(g);
+                            return <span key={"g-" + i + "-" + j} className={"df-char " + cls + " font-semibold"}>{g}</span>;
+                        }
+                    }
+                    return <span key={"g-" + i + "-" + j}>{g}</span>;
+                };
+                const head = clusters.slice(0, opts.boldFirstN).map(deco);
+                const tail = clusters.slice(opts.boldFirstN).map(deco);
+                return <span key={"w-" + i} className="df-word"><strong className="df-head font-semibold">{head}</strong>{tail}</span>;
+            });
+            return <>{nodes}</>;
+        }
+
+        // ---------------- Small UI bits ----------------
+        const Section = ({ title, className, children }) => (
+            <section className={cx("rounded-2xl border border-violet-200 p-5 shadow-sm", className)}>
+                {title && <h2 className="mb-3 text-xl font-semibold text-violet-900">{title}</h2>}
+                {children}
+            </section>
+        );
+        const Chip = ({ selected, onClick, children }) => (
+            <button onClick={onClick} className={cx("rounded-full border px-3 py-1 text-sm transition", selected ? "border-violet-600 bg-violet-600 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:border-violet-400")}>
+                {children}
+            </button>
+        );
+        const Range = ({ min, max, step = 1, value, onChange, ariaLabel }) => (
+            <input aria-label={ariaLabel} type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="h-2 w-full cursor-pointer appearance-none rounded-full bg-violet-200 accent-violet-600" />
+        );
+
+        function App() {
+            // load persisted language or default to English
+            const [lang, setLang] = useState(() => {
+                try {
+                    const saved = localStorage.getItem("preferred_lang");
+                    return LANGS.find(l => l.code === saved) || LANGS[0];
+                } catch {
+                    return LANGS[0];
+                }
+            });
+            // UI-specific selected code used to highlight language buttons reliably
+            const [selectedLangCode, setSelectedLangCode] = useState(lang.code);
+            useEffect(() => {
+                window.__app_lang_code__ = lang?.code || 'en';
+                try { document.title = (TRANSLATIONS[lang?.code]?.docTitle) || TRANSLATIONS['en'].docTitle; } catch { }
+                try { localStorage.setItem("preferred_lang", lang.code); } catch { }
+            }, [lang]);
+
+            const [step, setStep] = useState("language");
+            const [authMode, setAuthMode] = useState(null);
+
+            const [harder, setHarder] = useState(null);
+            const [obstacles, setObstacles] = useState([]);
+            const [prefFontPx, setPrefFontPx] = useState(18);
+            const [prefLine, setPrefLine] = useState(1.6);
+            const [prefLetter, setPrefLetter] = useState(0.02);
+            const [ttsAutoplay, setTtsAutoplay] = useState(false);
+
+            const [wozOpen, setWozOpen] = useState(false);
+            const [wozDraft, setWozDraft] = useState("");
+            const [forcedSimplified, setForcedSimplified] = useState(null);
+
+            const [inputTab, setInputTab] = useState("paste");
+            const [original, setOriginal] = useState("");
+            const [uploadedFileName, setUploadedFileName] = useState(null);
+
+            const [summaryLen, setSummaryLen] = useState(120);
+            const [optSimplifyVocab, setOptSimplifyVocab] = useState(true);
+            const [optSplitLong, setOptSplitLong] = useState(true);
+
+            const [progress, setProgress] = useState(0);
+            const [progressStage, setProgressStage] = useState(0);
+            const PROGRESS_STEPS = ['progressUploading', 'progressAnalyzing', 'progressSimplifying', 'progressApplying', 'progressFinalizing'];
+
+            const [theme, setTheme] = useState("light");
+            const [fontPx, setFontPx] = useState(18);
+            const [lineHeight, setLineHeight] = useState(1.7);
+            const [letterSpacingEm, setLetterSpacingEm] = useState(0.02);
+            const [weightBold, setWeightBold] = useState(false);
+            const [showOriginal, setShowOriginal] = useState(true);
+
+            const [assistOn, setAssistOn] = useState(true);
+            const [boldFirstN, setBoldFirstN] = useState(2);
+            const [charAssist, setCharAssist] = useState(true);
+
+            const computedSimplified = React.useMemo(() => simplifyText(original, summaryLen, { splitLongSentences: optSplitLong, simplifyVocab: optSimplifyVocab }), [original, summaryLen, optSplitLong, optSimplifyVocab]);
+            const outText = forcedSimplified ?? computedSimplified;
+
+            // Detect simple HTML in the output and provide a minimal sanitizer
+            const isHtmlString = (s) => typeof s === 'string' && /<\/?[a-z][\s\S]*>/i.test(s);
+            const sanitizeHtml = (html) => {
+                try {
+                    const tmp = document.createElement('div');
+                    tmp.innerHTML = html || '';
+                    const allowed = new Set(['STRONG', 'B', 'EM', 'I', 'U', 'BR', 'P', 'SPAN', 'DIV', 'UL', 'OL', 'LI', 'A']);
+                    function clean(node) {
+                        if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.nodeValue || '');
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            if (!allowed.has(node.nodeName)) {
+                                const frag = document.createDocumentFragment();
+                                node.childNodes.forEach(ch => {
+                                    const c = clean(ch); if (c) frag.appendChild(c);
+                                });
+                                return frag;
+                            }
+                            const el = document.createElement(node.nodeName.toLowerCase());
+                            if (node.nodeName === 'A') {
+                                const href = node.getAttribute('href') || '';
+                                if (/^(https?:|mailto:)/i.test(href)) el.setAttribute('href', href);
+                            }
+                            node.childNodes.forEach(ch => {
+                                const c = clean(ch); if (c) el.appendChild(c);
+                            });
+                            return el;
+                        }
+                        return document.createDocumentFragment();
+                    }
+                    const outFrag = document.createDocumentFragment();
+                    tmp.childNodes.forEach(ch => outFrag.appendChild(clean(ch)));
+                    const wrapper = document.createElement('div');
+                    wrapper.appendChild(outFrag);
+                    return wrapper.innerHTML;
+                } catch (e) { return '' + (html || ''); }
+            };
+
+            useEffect(() => {
+                if (step === "processing") {
+                    if (harder === "reading") {
+                        setFontPx(v => Math.max(v, Math.max(prefFontPx, 18)));
+                        setLineHeight(v => Math.max(v, Math.max(prefLine, 1.7)));
+                        setLetterSpacingEm(v => Math.max(v, Math.max(prefLetter, 0.02)));
+                        setWeightBold(obstacles.includes("dense") || obstacles.includes("small"));
+                    }
+                    if (harder === "understanding") {
+                        setOptSplitLong(true);
+                        setOptSimplifyVocab(true);
+                    }
+                    if (obstacles.includes("small")) setFontPx(v => Math.max(v, 20));
+                    if (obstacles.includes("tight")) setLineHeight(v => Math.max(v, 1.9));
+                    if (obstacles.includes("dense")) setLetterSpacingEm(v => Math.max(v, 0.03));
+                    if (obstacles.includes("complex")) setOptSimplifyVocab(true);
+                    if (obstacles.includes("long")) setOptSplitLong(true);
+                    if (obstacles.includes("busy")) { setShowOriginal(false); setTheme("sepia"); }
+                }
+            }, [step]);
+
+            useEffect(() => {
+                if (step !== "processing") return;
+                setProgress(0); setProgressStage(0);
+                const totalMs = 1600 + Math.min(4000, Math.max(0, original.length / 2));
+                const start = performance.now();
+                const raf = () => {
+                    const elapsed = performance.now() - start;
+                    const p = clamp(elapsed / totalMs, 0, 1);
+                    setProgress(Math.round(p * 100));
+                    setProgressStage(Math.min(PROGRESS_STEPS.length - 1, Math.floor(p * PROGRESS_STEPS.length)));
+                    if (p < 1) requestAnimationFrame(raf); else setStep("result");
+                };
+                const id = requestAnimationFrame(raf);
+                return () => cancelAnimationFrame(id);
+            }, [step]);
+
+            const [isSpeaking, setIsSpeaking] = useState(false);
+            const [isPaused, setIsPaused] = useState(false);
+            const [voices, setVoices] = useState([]);
+            const utteranceRef = React.useRef(null);
+
+            useEffect(() => {
+                const loadVoices = () => setVoices(window.speechSynthesis.getVoices());
+                loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices;
+                return () => { window.speechSynthesis.onvoiceschanged = null; };
+            }, []);
+
+            const pickVoice = (code) => voices.find(v => (v.lang || "").toLowerCase().startsWith(code))
+                || voices.find(v => /te|en|bn|ta|ml|mr|pa|kn/i.test(v.lang || ""))
+                || voices[0];
+
+            const startTTS = () => {
+                const text = outText;
+                if (!text) return;
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                const voice = pickVoice(lang.code); if (voice) u.voice = voice;
+                u.rate = 0.95;
+                u.onend = () => { setIsSpeaking(false); setIsPaused(false); };
+                u.onerror = () => { setIsSpeaking(false); setIsPaused(false); };
+                utteranceRef.current = u;
+                window.speechSynthesis.speak(u);
+                setIsSpeaking(true); setIsPaused(false);
+            };
+            const pauseTTS = () => { if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) { window.speechSynthesis.pause(); setIsPaused(true); } };
+            const resumeTTS = () => { if (window.speechSynthesis.paused) { window.speechSynthesis.resume(); setIsPaused(false); } };
+            const stopTTS = () => { window.speechSynthesis.cancel(); setIsSpeaking(false); setIsPaused(false); };
+
+            useEffect(() => { if (step === "result" && ttsAutoplay) { try { startTTS(); } catch { } } }, [step, ttsAutoplay]);
+
+            useEffect(() => {
+                const onKey = (e) => { if (e.shiftKey && e.key.toLowerCase() === 'w') { e.preventDefault(); setWozOpen(v => !v); } };
+                window.addEventListener('keydown', onKey);
+                return () => window.removeEventListener('keydown', onKey);
+            }, []);
+
+            const copySimplified = async () => {
+                try { await navigator.clipboard.writeText(outText); alert("Copied simplified text to clipboard."); }
+                catch (e) { alert("Copy failed. " + (e?.message || e)); }
+            };
+            const downloadFile = (name, content) => {
+                const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+                const url = URL.createObjectURL(blob); const a = document.createElement("a");
+                a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+            };
+
+            // ---------- LanguageScreen (fixed) ----------
+            const LanguageScreen = () => {
+                const [localSelected, setLocalSelected] = useState(selectedLangCode);
+                useEffect(() => setLocalSelected(selectedLangCode), [selectedLangCode]);
+                const handleSelect = (l) => {
+                    setLocalSelected(l.code);
+                    setSelectedLangCode(l.code);
+                    setLang(l);
+                    // short delay ensures highlight is visible before navigating
+                    setTimeout(() => setStep("gate"), 80);
+                };
+                return (
+                    <div className="mx-auto w-full max-w-3xl">
+                        <h1 className="mb-6 text-center text-2xl font-bold">{t('chooseLanguage')}</h1>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {LANGS.map(l => (
+                                <button key={l.code} onClick={() => handleSelect(l)} className={cx("rounded-2xl border p-6 text-center text-lg shadow-sm transition", localSelected === l.code ? "border-violet-600 ring-2 ring-violet-200" : "border-zinc-200 hover:border-violet-300")}>{l.label}</button>
+                            ))}
+                        </div>
+                        <p className="mt-6 text-center text-sm text-zinc-500">{t('guestHint')}</p>
+                    </div>
+                );
+            };
+
+            const GateScreen = () => (
+                <div className="mx-auto w-full max-w-2xl">
+                    <h1 className="mb-6 text-center text-2xl font-bold">{t('welcome')}</h1>
+                    <div className="grid grid-cols-1 gap-3">
+                        <button className="rounded-xl bg-violet-600 px-5 py-3 text-white" onClick={() => { setAuthMode("guest"); setStep("questionnaire"); }}>{t('continueGuest')}</button>
+                        <button className="rounded-xl border border-zinc-300 px-5 py-3" onClick={() => { setAuthMode("login"); setStep("questionnaire"); }}>{t('login')}</button>
+                        <button className="rounded-xl border border-zinc-300 px-5 py-3" onClick={() => { setAuthMode("signup"); setStep("questionnaire"); }}>{t('createAccount')}</button>
+                    </div>
+                    <p className="mt-4 text-center text-xs text-zinc-500">{t('guestHint')}</p>
+                </div>
+            );
+
+            const QuestionnaireScreen = () => (
+                <div className="mx-auto w-full max-w-4xl space-y-6">
+                    <Section title={t('whatsHarder')}>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <button className={cx("flex items-center justify-center gap-3 rounded-2xl border p-5 text-left shadow-sm", harder === "reading" ? "border-violet-600 ring-2 ring-violet-200" : "border-zinc-200 hover:border-violet-300")} onClick={() => setHarder("reading")}>
+                                <span className="text-2xl">🖤</span>
+                                <div><div className="font-semibold">{t('readingText')}</div><div className="text-sm text-zinc-500">{t('readingHint')}</div></div>
+                            </button>
+                            <button className={cx("flex items-center justify-center gap-3 rounded-2xl border p-5 text-left shadow-sm", harder === "understanding" ? "border-violet-600 ring-2 ring-violet-200" : "border-zinc-200 hover:border-violet-300")} onClick={() => setHarder("understanding")}>
+                                <span className="text-2xl">💡</span>
+                                <div><div className="font-semibold">{t('understanding')}</div><div className="text-sm text-zinc-500">{t('understandingHint')}</div></div>
+                            </button>
+                        </div>
+                    </Section>
+
+                    <Section title={t('getsInTheWay')}>
+                        <div className="flex flex-wrap gap-2">
+                            {[
+                                { id: "small", label: "Small text" },
+                                { id: "tight", label: "Tight line spacing" },
+                                { id: "dense", label: "Dense paragraphs" },
+                                { id: "complex", label: "Complex words" },
+                                { id: "long", label: "Long sentences" },
+                                { id: "busy", label: "Busy layout" },
+                            ].map(o => (
+                                <Chip key={o.id} selected={obstacles.includes(o.id)} onClick={() => setObstacles(prev => prev.includes(o.id) ? prev.filter(x => x !== o.id) : [...prev, o.id])}>{t('obstacles.' + o.id)}</Chip>
+                            ))}
+                        </div>
+                    </Section>
+
+                    <Section title={t('previewSettings')}>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <div><label className="text-sm">Text size: {prefFontPx}px</label><Range min={14} max={28} value={prefFontPx} onChange={setPrefFontPx} ariaLabel="Text size" /></div>
+                            <div><label className="text-sm">Line spacing: {prefLine.toFixed(1)}</label><Range min={1.2} max={2.2} step={0.1} value={prefLine} onChange={setPrefLine} ariaLabel="Line spacing" /></div>
+                            <div><label className="text-sm">Letter spacing: {(prefLetter * 100).toFixed(0)}%</label><Range min={0} max={0.1} step={0.005} value={prefLetter} onChange={setPrefLetter} ariaLabel="Letter spacing" /></div>
+                        </div>
+                        <div className="mt-3">
+                            <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-violet-600" checked={ttsAutoplay} onChange={(e) => setTtsAutoplay(e.target.checked)} /> {t('readAloudQuestion')}</label>
+                        </div>
+                    </Section>
+
+                    <div className="flex items-center justify-between">
+                        <button className="rounded-xl border border-zinc-300 px-4 py-2" onClick={() => setStep("gate")}>{t('back')}</button>
+                        <div className="flex gap-2">
+                            <button className="rounded-xl border border-zinc-300 px-5 py-2" onClick={() => setStep("input")}>{t('skip')}</button>
+                            <button className="rounded-xl bg-violet-600 px-5 py-2 text-white disabled:opacity-50" disabled={!harder} onClick={() => setStep("input")}>{t('next')}</button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const InputScreen = () => (
+                <div className="mx-auto w-full max-w-5xl space-y-5">
+                    <Section title={t('addYourText')}>
+                        <div className="mb-3 flex gap-2">
+                            <Chip selected={inputTab === "paste"} onClick={() => setInputTab("paste")}>{t('pasteText')}</Chip>
+                            <Chip selected={inputTab === "upload"} onClick={() => setInputTab("upload")}>{t('uploadFile')}</Chip>
+                        </div>
+                        {inputTab === "paste"
+                            ? <textarea className="h-56 w-full rounded-xl border border-zinc-300 p-3 focus:border-violet-400 focus:outline-none" placeholder={t('pastePlaceholder')} value={original} onChange={e => setOriginal(e.target.value)} />
+                            : (<div className="rounded-xl border border-dashed border-zinc-300 p-6 text-center">
+                                <input type="file" accept=".txt" onChange={async (e) => {
+                                    const file = e.target.files?.[0]; if (!file) return;
+                                    try { const txt = await readTextFile(file); setUploadedFileName(file.name); setOriginal(txt); }
+                                    catch (err) { alert(err.message ?? String(err)); }
+                                }} />
+                                <p className="mt-2 text-xs text-zinc-500">{t('uploadHint')}</p>
+                                {uploadedFileName && (<p className="mt-2 text-sm">{t('loaded')} <span className="font-medium">{uploadedFileName}</span></p>)}
+                            </div>)
+                        }
+                        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label className="text-sm">{t('summaryLength', { value: summaryLen })}</label>
+                                <Range min={25} max={300} value={summaryLen} onChange={setSummaryLen} ariaLabel="Summary length" />
+                                <div className="mt-1 flex gap-2">
+                                    {[50, 100, 150].map(n => <Chip key={n} selected={summaryLen === n} onClick={() => setSummaryLen(n)}>{n} words</Chip>)}
+                                    <Chip selected={summaryLen === 120} onClick={() => setSummaryLen(120)}>Auto</Chip>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-violet-600" checked={optSimplifyVocab} onChange={e => setOptSimplifyVocab(e.target.checked)} /> {t('simplifyVocab')}</label>
+                                <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-violet-600" checked={optSplitLong} onChange={e => setOptSplitLong(e.target.checked)} /> {t('splitLongSentences')}</label>
+                            </div>
+                        </div>
+                        <div className="mt-5 flex items-center justify-between">
+                            <button className="rounded-xl border border-zinc-300 px-4 py-2" onClick={() => setStep("questionnaire")}>{t('back')}</button>
+                            <button className="rounded-xl bg-violet-600 px-5 py-2 text-white disabled:opacity-50" disabled={!original.trim()} onClick={() => setStep("processing")}>{t('simplifyAction')}</button>
+                        </div>
+                    </Section>
+                </div>
+            );
+
+            const ProcessingScreen = () => (
+                <div className="mx-auto w-full max-w-2xl">
+                    <Section title={t('workingOnIt')}>
+                        <div className="space-y-4">
+                            <div className="overflow-hidden rounded-full bg-violet-100">
+                                <div className="h-3 rounded-full bg-violet-600 transition-all" style={{ width: progress + "%" }} />
+                            </div>
+                            <ol className="grid grid-cols-1 gap-2 sm:grid-cols-5">
+                                {PROGRESS_STEPS.map((s, i) => <li key={s} className={cx("rounded-lg border px-3 py-2 text-center text-xs", i <= progressStage ? "border-violet-500 bg-violet-50 text-violet-700" : "border-zinc-200 text-zinc-500")}>{t(s)}</li>)}
+                            </ol>
+                            <p className="text-center text-sm text-zinc-500">{t('detectedLanguage')} <span className="font-medium">{lang.uiLabel}</span></p>
+                        </div>
+                    </Section>
+                </div>
+            );
+
+            const ResultsScreen = () => (
+                <div className="mx-auto w-full max-w-6xl space-y-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h1 className="text-2xl font-bold">{t('yourSimplifiedText')}</h1>
+                        <div className="flex items-center gap-2">
+                            <Chip selected={theme === "light"} onClick={() => setTheme("light")}>{t('themeLight')}</Chip>
+                            <Chip selected={theme === "sepia"} onClick={() => setTheme("sepia")}>{t('themeSepia')}</Chip>
+                            <Chip selected={theme === "dark"} onClick={() => setTheme("dark")}>{t('themeDark')}</Chip>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        {showOriginal && (
+                            <Section title={t('original')}>
+                                <div className="max-h-[60vh] overflow-auto rounded-xl border border-zinc-200 bg-white p-4 text-[16px] leading-7">{original || <span className="text-zinc-400">{t('empty')}</span>}</div>
+                            </Section>
+                        )}
+
+                        <Section title={t('simplified')}>
+                            <div className={cx("max-h-[60vh] overflow-auto rounded-xl border p-4", THEME_CLASSES[theme])}>
+                                <div style={{ fontSize: fontPx, lineHeight: lineHeight, letterSpacing: (Math.round(letterSpacingEm * 1000) / 1000) + "em", fontWeight: weightBold ? 600 : 400 }}>
+                                    {(() => {
+                                        const looksLikeHtml = isHtmlString(outText);
+                                        if (assistOn) {
+                                            if (looksLikeHtml) {
+                                                return outText ? <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(outText) }} /> : <span className="opacity-50">{t('noOutput')}</span>;
+                                            }
+                                            return renderAssistiveNodes(outText, lang.code, { boldFirstN, enableCharAssist: charAssist });
+                                        } else {
+                                            if (looksLikeHtml) return <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(outText) }} />;
+                                            return outText || <span className="opacity-50">{t('noOutput')}</span>;
+                                        }
+                                    })()}
+                                </div>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div><label className="text-sm">Font size: {fontPx}px</label><Range min={14} max={30} value={fontPx} onChange={setFontPx} ariaLabel="Font size" /></div>
+                                <div><label className="text-sm">Line spacing: {lineHeight.toFixed(1)}</label><Range min={1.2} max={2.2} step={0.1} value={lineHeight} onChange={setLineHeight} ariaLabel="Line spacing" /></div>
+                                <div><label className="text-sm">Letter spacing: {(letterSpacingEm * 100).toFixed(0)}%</label><Range min={0} max={0.1} step={0.005} value={letterSpacingEm} onChange={setLetterSpacingEm} ariaLabel="Letter spacing" /></div>
+                                <div className="flex flex-col gap-2">
+                                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-violet-600" checked={weightBold} onChange={e => setWeightBold(e.target.checked)} /> Bold text</label>
+                                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-violet-600" checked={showOriginal} onChange={e => setShowOriginal(e.target.checked)} /> Show original</label>
+                                </div>
+                            </div>
+
+                            <Section className="mt-4" title={t('readingAssists')}>
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-violet-600" checked={assistOn} onChange={e => setAssistOn(e.target.checked)} /> {t('enableAssists')}</label>
+                                    <div><label className="text-sm">{t('firstVarna', { value: boldFirstN })}</label><Range min={1} max={3} value={boldFirstN} onChange={setBoldFirstN} ariaLabel="Bold first N graphemes" /></div>
+                                    {lang.code === "te" && (<label className="flex items-center gap-2 text-sm"><input type="checkbox" className="accent-violet-600" checked={charAssist} onChange={e => setCharAssist(e.target.checked)} /> {t('hindiCharAssists')}</label>)}
+                                </div>
+                                <p className="mt-2 text-xs text-zinc-500">{t('assistsDescription')}</p>
+                            </Section>
+
+                            <div className="mt-6 flex flex-wrap items-center gap-3">
+                                <button onClick={() => (isSpeaking ? stopTTS() : startTTS())} className="flex items-center gap-2 rounded-xl bg-black px-4 py-2 text-white" aria-label="Read aloud" title={t('readAloud')}>
+                                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-black">{isSpeaking ? "■" : "▶"}</span>
+                                    <span>{lang.ttsLabel}</span>
+                                </button>
+                                <button onClick={isPaused ? resumeTTS : pauseTTS} disabled={!isSpeaking} className="rounded-xl border border-zinc-300 px-3 py-2 disabled:opacity-50">{isPaused ? t('resume') : t('pause')}</button>
+                                <button onClick={stopTTS} disabled={!isSpeaking} className="rounded-xl border border-zinc-300 px-3 py-2 disabled:opacity-50">{t('stop')}</button>
+                            </div>
+
+                            <div className="mt-6 flex flex-wrap items-center gap-2">
+                                <button className="rounded-xl border border-zinc-300 px-4 py-2" onClick={copySimplified}>{t('copy')}</button>
+                                <button className="rounded-xl border border-zinc-300 px-4 py-2" onClick={() => downloadFile("simplified.txt", outText)}>{t('downloadTxt')}</button>
+                                <button className="rounded-xl border border-zinc-300 px-4 py-2" onClick={() => setStep("input")}>{t('startOver')}</button>
+                            </div>
+                        </Section>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen">
+                    <div className="mx-auto mb-6 max-w-6xl rounded-2xl border border-violet-200 bg-white/70 p-4 text-center shadow-sm backdrop-blur">
+                        <div className="text-sm uppercase tracking-wider text-violet-700">Prototype</div>
+                        <div className="text-2xl font-extrabold">Text Simplifier</div>
+                        <div className="text-xs text-zinc-500">Language-aware, questionnaire-guided summarization • TTS • Reading assists • WoZ</div>
+                    </div>
+
+                    {wozOpen && (
+                        <div className="fixed bottom-4 right-4 z-50 w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-violet-300 bg-white p-4 shadow-xl">
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm font-semibold text-violet-700">{t('wizardPanel')}</div>
+                                <button className="text-xs text-zinc-500" onClick={() => setWozOpen(false)}>{t('close')}</button>
+                            </div>
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                                <button className="rounded-md border px-2 py-1 text-sm" onClick={() => { setHarder("reading"); setFontPx(20); setLineHeight(1.9); setLetterSpacingEm(0.03); setWeightBold(true); }}>{t('presetReading')}</button>
+                                <button className="rounded-md border px-2 py-1 text-sm" onClick={() => { setHarder("understanding"); setOptSplitLong(true); setOptSimplifyVocab(true); }}>{t('presetUnderstanding')}</button>
+                                <button className="rounded-md border px-2 py-1 text-sm" onClick={() => setShowOriginal(v => !v)}>{t('toggleOriginal')}</button>
+                                <button className="rounded-md border px-2 py-1 text-sm" onClick={() => setTheme("sepia")}>{t('themeSepiaButton')}</button>
+                            </div>
+                            <textarea value={wozDraft} onChange={(e) => setWozDraft(e.target.value)} className="mt-3 h-24 w-full rounded-md border p-2 text-sm" placeholder={t('wozPlaceholder')}></textarea>
+                            <div className="mt-2 flex gap-2">
+                                <button className="rounded-md border px-3 py-1 text-sm" onClick={() => setForcedSimplified(wozDraft || null)}>{t('replaceSimplified')}</button>
+                                <button className="rounded-md border px-3 py-1 text-sm" onClick={() => setForcedSimplified(null)}>{t('useComputed')}</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {step === "language" && <LanguageScreen />}
+                    {step === "gate" && <GateScreen />}
+                    {step === "questionnaire" && <QuestionnaireScreen />}
+                    {step === "input" && <InputScreen />}
+                    {step === "processing" && <ProcessingScreen />}
+                    {step === "result" && <ResultsScreen />}
+
+                    <footer className="mx-auto mt-10 max-w-6xl text-center text-xs text-zinc-500">
+                        <div className="mb-2">{t('currentLanguage')} <span className="font-medium">{lang.uiLabel}</span></div>
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                            {LANGS.map(l => (
+                                <button
+                                    key={l.code}
+                                    onClick={() => {
+                                        setLang(l);
+                                        setSelectedLangCode(l.code);
+                                    }}
+                                    className={cx("rounded-full border px-3 py-1 text-sm transition", l.code === lang.code ? "border-violet-600 bg-violet-600 text-white" : "border-zinc-300 bg-white text-zinc-700 hover:border-violet-400")}
+                                >
+                                    {l.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="mt-2 text-[11px] text-zinc-400">{t('wizardHint', { value: ttsAutoplay ? 'Auto-read: on' : 'Auto-read: off' })}</div>
+                    </footer>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+</body>
+
+</html>

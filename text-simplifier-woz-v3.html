@@ -655,17 +655,39 @@
         a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
       };
 
-      const LanguageScreen = () => (
-        <div className="mx-auto w-full max-w-3xl">
-          <h1 className="mb-6 text-center text-2xl font-bold">{t('chooseLanguage')}</h1>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {LANGS.map(l => (
-              <button key={l.code} onClick={() => { setLang(l); setStep("gate"); }} className={cx("rounded-2xl border p-6 text-center text-lg shadow-sm transition", lang.code === l.code ? "border-violet-600 ring-2 ring-violet-200" : "border-zinc-200 hover:border-violet-300")}>{l.label}</button>
-            ))}
+      const LanguageScreen = () => {
+        const [selectedLangCode, setSelectedLangCode] = useState(lang.code);
+
+        const handleSelectLanguage = (l) => {
+          setSelectedLangCode(l.code);
+          setLang(l);
+          // short delay before moving next so highlight appears cleanly
+          setTimeout(() => setStep("gate"), 80);
+        };
+
+        return (
+          <div className="mx-auto w-full max-w-3xl">
+            <h1 className="mb-6 text-center text-2xl font-bold">{t('chooseLanguage')}</h1>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {LANGS.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => handleSelectLanguage(l)}
+                  className={cx(
+                    "rounded-2xl border p-6 text-center text-lg shadow-sm transition",
+                    selectedLangCode === l.code
+                      ? "border-violet-600 ring-2 ring-violet-200"
+                      : "border-zinc-200 hover:border-violet-300"
+                  )}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-6 text-center text-sm text-zinc-500">{t('guestHint')}</p>
           </div>
-          <p className="mt-6 text-center text-sm text-zinc-500">{t('guestHint')}</p>
-        </div>
-      );
+        );
+      };
 
       const GateScreen = () => (
         <div className="mx-auto w-full max-w-2xl">
@@ -904,9 +926,25 @@
 
           <footer className="mx-auto mt-10 max-w-6xl text-center text-xs text-zinc-500">
             <div className="mb-2">{t('currentLanguage')} <span className="font-medium">{lang.uiLabel}</span></div>
-            <div className="flex flex-wrap items-center justify-center gap-2">{LANGS.map(l => <Chip key={l.code} selected={l.code===lang.code} onClick={() => setLang(l)}>{l.label}</Chip>)}</div>
-            <div className="mt-2 text-[11px] text-zinc-400">{t('wizardHint', { value: ttsAutoplay ? 'Auto-read: on' : 'Auto-read: off' })}</div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {LANGS.map((l) => (
+                <Chip
+                  key={l.code}
+                  selected={l.code === lang.code}
+                  onClick={() => {
+                    setLang(l);
+                    window.__app_lang_code__ = l.code;
+                  }}
+                >
+                  {l.label}
+                </Chip>
+              ))}
+            </div>
+            <div className="mt-2 text-[11px] text-zinc-400">
+              {t('wizardHint', { value: ttsAutoplay ? 'Auto-read: on' : 'Auto-read: off' })}
+            </div>
           </footer>
+
         </div>
       );
     }
