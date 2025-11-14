@@ -176,6 +176,8 @@ h1, h3, p { text-align: center; }
     border-radius: 0.12em;
     background: rgba(99, 102, 241, 0.04);
 }
+
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -476,28 +478,55 @@ def page_login():
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 80vh;
+            height: 30vh;
             text-align: center;
+            padding-top: 20px
         }
         .login-title {
             font-size: 48px;
             font-weight: 800;
             color: #7C3AED;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         .login-subtitle {
             font-size: 18px;
             color: gray;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
         .login-input {
-            width: 300px;
-            padding: 10px;
-            font-size: 16px;
+            width: 80px;
+            padding: 20px 10px;
+            font-size: 40px;
             border-radius: 8px;
             border: 1px solid #ccc;
             margin-bottom: 20px;
         }
+        div[data-testid="stButton"] > button {
+            height: 60px !important;
+            font-size: 20px !important;
+            font-weight: 600 !important;
+            padding: 15px 20px !important;
+            border-radius: 10px !important;
+            min-height: 60px !important;
+        }
+        
+        /* Force font size with highest specificity */
+        .stApp .stButton > button {
+            font-size: 20px !important;
+        }
+        
+        /* Last resort - target all buttons */
+        * button {
+            font-size: 20px !important;
+        }
+        .stTextInput > div > div > input {
+            font-size: 20px !important;
+            height: 30px !important;
+            padding: 15px 10px !important;
+        }
+        
+        /* Force all labels to be larger */
+        
         </style>
     """, unsafe_allow_html=True)
 
@@ -515,14 +544,96 @@ def page_login():
         if st.button("Login", use_container_width=True):
             if username.strip():
                 st.session_state.user = username.strip()
-                st.session_state.page = "welcome"
+                st.session_state.page = "examples"
                 st.rerun()
             else:
                 st.error("Please enter a name.")
     with col2:
         if st.button("Continue as Guest", use_container_width=True):
             st.session_state.user = "guest"
-            st.session_state.page = "welcome"
+            st.session_state.page = "examples"
+            st.rerun()
+
+def page_telugu_login():
+    st.markdown("""
+        <style>
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 30vh;
+            text-align: center;
+            padding-top: 20px
+        }
+        .login-title {
+            font-size: 48px;
+            font-weight: 800;
+            color: #7C3AED;
+            margin-bottom: 10px;
+        }
+        .login-subtitle {
+            font-size: 18px;
+            color: gray;
+            margin-bottom: 20px;
+        }
+        .login-input {
+            width: 80px;
+            padding: 20px 10px;
+            font-size: 40px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+        div[data-testid="stButton"] > button {
+            height: 60px !important;
+            font-size: 20px !important;
+            font-weight: 600 !important;
+            padding: 15px 20px !important;
+            border-radius: 10px !important;
+            min-height: 60px !important;
+        }
+        
+        /* Force font size with highest specificity */
+        .stApp .stButton > button {
+            font-size: 20px !important;
+        }
+        
+        /* Last resort - target all buttons */
+        * button {
+            font-size: 20px !important;
+        }
+        .stTextInput > div > div > input {
+            font-size: 20px !important;
+            height: 25px !important;
+            padding: 15px 10px !important;
+        }
+        
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <div class="login-container">
+            <div class="login-title">వచన సరళీకరణకు స్వాగతం!</div>
+            <div class="login-subtitle">మీ పేరు ఎంటర్ చేయండి లేదా గెస్ట్‌గా కొనసాగండి.</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    username = st.text_input("మీ పేరు ఎంటర్ చేయండి", key="username_input", placeholder="మీ పేరు")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("లాగిన్ అవ్వండి", use_container_width=True):
+            if username.strip():
+                st.session_state.user = username.strip()
+                st.session_state.page = "examples"
+                st.rerun()
+            else:
+                st.error("దయచేసి మీ పేరు ఎంటర్ చేయండి")
+    with col2:
+        if st.button("గెస్ట్‌గా కొనసాగండి", use_container_width=True):
+            st.session_state.user = "guest"
+            st.session_state.page = "examples"
             st.rerun()
 
 def page_welcome():
@@ -535,7 +646,7 @@ def page_welcome():
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 85vh;
+            height: 40vh;
             text-align: center;
         }
 
@@ -603,7 +714,6 @@ def page_language():
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 40px;
             flex-wrap: wrap;
             margin-top: 60px;
         }
@@ -623,11 +733,22 @@ def page_language():
             overflow: hidden !important;
             transition: all 0.25s ease !important;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
+            padding: 0 !important;                /* ADDED: remove default left padding */
+            align-items: center !important;       /* ADDED */
+            justify-content: center !important;
+            margin: 0 !important;                 /* ADDED */
+            width: 100% !important;               /* ADDED */
+            text-align: center !important;
+            
         }
         div[data-testid="stMarkdownContainer"] > p{
-            font-size: 150px;        
+            font-size: 150px; 
+            justify-content: center;
+            align-items: center;   
+               
         }
-
+       
+        
         /* English flag watermark */
         div[data-testid="stButton"][key="english_btn"] > button::before {
             content: "";
@@ -637,6 +758,7 @@ def page_language():
             background-size: cover;
             background-position: center;
             opacity: 0.08;
+            
         }
 
         /* Telugu (India) flag watermark */
@@ -666,6 +788,10 @@ def page_language():
             margin-top: 10px;
             cursor: pointer;
             transition: color 0.25s ease;
+            width: max-content;              /* ADDED */
+            margin-left: auto;               /* ADDED */
+            margin-right: auto;
+            text-align: center 
         }
         .lang-name:hover {
             color: #5B21B6;
@@ -688,7 +814,7 @@ def page_language():
     with col1:
         if st.button("E", key="english_btn"):
             st.session_state.lang = "English"
-            st.session_state.page = "examples"
+            st.session_state.page = "login"
             st.rerun()
         
         st.markdown(f"<div class='lang-name'>{t['english_label']}</div>", unsafe_allow_html=True)
@@ -696,7 +822,7 @@ def page_language():
     with col2:
         if st.button("త", key="telugu_btn"):
             st.session_state.lang = "తెలుగు"
-            st.session_state.page = "examples"
+            st.session_state.page = "login_telugu"
             st.rerun()
         
         st.markdown(f"<div class='lang-name'>{t['telugu_label']}</div>", unsafe_allow_html=True)
@@ -796,22 +922,7 @@ def page_questionnaire():
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ------------------- Example Boxes -------------------
-    example_text = "The quick brown fox jumps over the lazy dog." if st.session_state.lang == "English" else "వంద బోధనే తుమ్హి రాజు శాసనే రాష్ట్రం ప్రజల ప్రియమే"
-    st.markdown(f"<h3>{t['example_texts']}</h3>", unsafe_allow_html=True)
-    col_example1, col_example2 = st.columns(2)
-    with col_example1:
-        st.markdown(f"""
-        <div class='lang-card' style='display: flex; align-items: center; justify-content: center; font-size: 18px; text-align: center;'>
-        {example_text}
-        </div>
-        """, unsafe_allow_html=True)
-    with col_example2:
-        letter_spacing = "letter-spacing: 3px;" if st.session_state.lang != "English" else ""
-        st.markdown(f"""
-        <div class='lang-card' style='display: flex; align-items: center; justify-content: center; font-size: 18px; text-align: center; {letter_spacing}'>
-        {example_text}
-        </div>
-        """, unsafe_allow_html=True)
+    
 
     # ------------------- Section 2: Obstacles -------------------
     st.markdown(f"<h3 style='margin-top:30px;'>{t['obstacles']}</h3>", unsafe_allow_html=True)
@@ -1713,10 +1824,16 @@ def page_result():
 # ------------------------------
 # Router
 # ------------------------------
-if not st.session_state.get("user"):
-    page_login()
-elif st.session_state.page == "welcome":
+
+# Initialize session state - ADD THIS SECTION
+if "page" not in st.session_state:
+    st.session_state.page = "welcome"
+
+# Page routing - REPLACE THE EXISTING ROUTING SECTION
+if st.session_state.page == "welcome":
     page_welcome()
+elif st.session_state.page == "login":
+    page_login()
 elif st.session_state.page == "language":
     page_language()
 elif st.session_state.page == "questionnaire":
@@ -1731,3 +1848,5 @@ elif st.session_state.page == "processing":
     page_processing()
 elif st.session_state.page == "result":
     page_result()
+elif st.session_state.page == "login_telugu":
+    page_telugu_login()
