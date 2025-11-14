@@ -62,3 +62,7 @@ venv/
 # Temporary files
 *.tmp
 *.temp
+
+_pycache__/
+__pycache__/
+*.pyc
