@@ -264,7 +264,7 @@ def generate_tts_audio(text, lang='en'):
         
         # Prepare the command
         # Assuming Fastspeech2_HS is in the workspace or adjust path as needed
-        fastspeech_path = "/content/Fastspeech2_HS"  # Adjust if different
+        fastspeech_path = "Fastspeech2_HS"  # Adjust if different
         cmd = [
             "python", "inference.py",
             "--sample_text", text,
