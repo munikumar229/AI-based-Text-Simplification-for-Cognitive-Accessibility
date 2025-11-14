@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import os
 from gtts import gTTS
+from pydub import AudioSegment
 
 # Lazy loading for translation
 _tokenizer = None
@@ -251,51 +252,40 @@ def _basic_simplify_text(txt, simplify_vocab=True, split_sentences=True, target_
     words = txt.split()
     return " ".join(words[:target_words]) + ("..." if len(words) > target_words else "")
 
-def generate_tts_audio(text, lang='en'):
+def generate_tts_audio(text, lang='en', speed=1.0):
     """
-    Generate TTS audio for the given text and language using Fastspeech2_HS, fallback to gTTS.
+    Generate TTS audio for the given text and language using gTTS.
+    Optionally adjust playback speed using pydub.
     Returns a BytesIO object containing the audio data.
     """
     try:
-        # Try Fastspeech2_HS first
-        # Create a temporary file for output
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
-            output_file = temp_file.name
-    
-        fastspeech_path = "Fastspeech2_HS"  # Adjust if different
-        cmd = [
-            "python", "inference.py",
-            "--sample_text", text,
-            "--language", "telugu" if lang == 'te' else "english",  # Map lang
-            "--gender", "female",
-            "--alpha", "1.0",
-            "--output_file", output_file
-        ]
-        
-        # Run the command
-        result = subprocess.run(cmd, cwd=fastspeech_path, capture_output=True, text=True, timeout=30)
-        if result.returncode != 0:
-            raise Exception(f"Fastspeech TTS failed: {result.stderr}")
-        
-        # Read the generated audio file
-        with open(output_file, 'rb') as f:
-            audio_data = f.read()
-        
-        # Clean up temp file
-        os.unlink(output_file)
-        
-        # Return as BytesIO
-        audio_file = io.BytesIO(audio_data)
+        tts = gTTS(text, lang=lang, slow=False)
+        audio_file = io.BytesIO()
+        tts.write_to_fp(audio_file)
         audio_file.seek(0)
+
+        # If speed is not 1.0, adjust using pydub
+        if speed != 1.0:
+            # Load audio from BytesIO
+            audio = AudioSegment.from_mp3(audio_file)
+
+            # Adjust speed (pydub uses frame_rate for speed control)
+            # Higher frame_rate = faster playback, lower = slower
+            original_frame_rate = audio.frame_rate
+            new_frame_rate = int(original_frame_rate * speed)
+
+            # Apply speed change
+            audio = audio._spawn(audio.raw_data, overrides={
+                'frame_rate': new_frame_rate
+            }).set_frame_rate(original_frame_rate)
+
+            # Export back to BytesIO
+            output_audio = io.BytesIO()
+            audio.export(output_audio, format='mp3')
+            output_audio.seek(0)
+            return output_audio
+
         return audio_file
     except Exception as e:
-        # Fallback to gTTS
-        try:
-            tts = gTTS(text, lang=lang, slow=False)
-            audio_file = io.BytesIO()
-            tts.save(audio_file)
-            audio_file.seek(0)
-            return audio_file
-        except Exception as e2:
-            raise Exception(f"Both TTS methods failed: Fastspeech - {e}, gTTS - {e2}")
+        raise Exception(f"TTS generation failed: {e}")
 

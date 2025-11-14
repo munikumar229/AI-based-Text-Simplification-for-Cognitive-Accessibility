@@ -1211,7 +1211,7 @@ def page_result():
     # Auto-play TTS if enabled
     if st.session_state.tts_autoplay:
         try:
-            audio_file = generate_tts_audio(simplified, lang='en' if st.session_state.lang == "English" else 'te')
+            audio_file = generate_tts_audio(simplified, lang='en' if st.session_state.lang == "English" else 'te', speed=st.session_state.audio_rate)
             st.audio(audio_file, format="audio/mp3")
         except Exception as e:
             st.error(f"Audio playback failed: {e}")
@@ -1315,7 +1315,7 @@ def page_result():
     with col_audio:
         if st.button(f"🔊 {t['play_audio']}", use_container_width=True):
             try:
-                audio_file = generate_tts_audio(simplified, lang='en' if st.session_state.lang == "English" else 'te')
+                audio_file = generate_tts_audio(simplified, lang='en' if st.session_state.lang == "English" else 'te', speed=st.session_state.audio_rate)
                 st.audio(audio_file, format="audio/mp3")
             except Exception as e:
                 st.error(f"Audio playback failed: {e}")
