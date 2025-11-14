@@ -11,5 +11,5 @@ dependencies:
   - pydub
 
   - pip
-  - pip:
-      - re
+
+      

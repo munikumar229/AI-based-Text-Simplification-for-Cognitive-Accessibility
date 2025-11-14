@@ -7,6 +7,8 @@ import streamlit.components.v1 as components
 import streamlit as st
 import regex
 import sqlite3
+import base64
+
 # Import backend functions
 from backend import simplify_text_with_nlp, generate_tts_audio
 
@@ -200,6 +202,78 @@ def simplify_text(txt, simplify_vocab=True, split_sentences=True, target_words=1
     words = txt.split()
     return " ".join(words[:target_words]) + ("..." if len(words) > target_words else "")
 
+def render_audio_player():
+    """Render a hidden HTML5 audio element controlled via JS & remember position."""
+    if st.session_state.audio_bytes is None:
+        return
+
+    b64_audio = base64.b64encode(st.session_state.audio_bytes).decode("utf-8")
+    version = st.session_state.audio_version
+    action = st.session_state.audio_action  # "play" / "pause" / "stop"
+    muted = "true" if st.session_state.audio_muted else "false"
+
+    components.html(
+        f"""
+        <audio id="ttsAudio" src="data:audio/mp3;base64,{b64_audio}"></audio>
+        <script>
+            const currentVersion = {version};
+            const action = "{action}";
+            const muted = {muted};
+
+            function initTtsAudio() {{
+                const audio = document.getElementById("ttsAudio");
+                if (!audio) return;
+
+                // Load previous state from localStorage
+                let state;
+                try {{
+                    state = JSON.parse(localStorage.getItem("ttsAudioState") || "{{}}");
+                }} catch (e) {{
+                    state = {{}};
+                }}
+
+                // If audio changed (different version), reset position
+                if (state.version !== currentVersion) {{
+                    state = {{ position: 0, version: currentVersion }};
+                }}
+
+                audio.muted = muted;
+
+                audio.addEventListener("loadedmetadata", function() {{
+                    // Restore previous position if we have one
+                    if (state.position && !isNaN(state.position)) {{
+                        audio.currentTime = state.position;
+                    }}
+
+                    if (action === "play") {{
+                        audio.play();
+                    }} else if (action === "pause") {{
+                        audio.pause();
+                    }} else if (action === "stop") {{
+                        audio.pause();
+                        audio.currentTime = 0;
+                        state.position = 0;
+                    }}
+                }});
+
+                // Continuously store current position
+                audio.addEventListener("timeupdate", function() {{
+                    const newState = {{
+                        position: audio.currentTime,
+                        version: currentVersion
+                    }};
+                    localStorage.setItem("ttsAudioState", JSON.stringify(newState));
+                }});
+            }}
+
+            initTtsAudio();
+        </script>
+        """,
+        height=0,
+    )
+
+
+
 # ------------------------------
 # Session State
 # ------------------------------
@@ -375,6 +449,21 @@ def get_texts(lang):
             "adjust_word_count": "సరళీకృత పాఠ్యంలో పదాల సంఖ్యను సర్దుబాటు చేయండి",
             "example_texts": "ఉదాహరణ వచనాలు",
         }
+if "audio_rate" not in st.session_state:
+    st.session_state.audio_rate = 1.0
+
+if "audio_bytes" not in st.session_state:
+    st.session_state.audio_bytes = None
+
+if "audio_action" not in st.session_state:
+    st.session_state.audio_action = "stop"  # "play" | "pause" | "stop"
+
+if "audio_muted" not in st.session_state:
+    st.session_state.audio_muted = False
+
+if "audio_version" not in st.session_state:
+    st.session_state.audio_version = 0
+
 
 # ------------------------------
 # Pages
@@ -1374,58 +1463,147 @@ def page_result():
                 unsafe_allow_html=True,
             )
 
+    # # Audio and Download buttons side by side
+    # col_audio, col_download, col_copy = st.columns(3)
+    # with col_audio:
+    #     if st.button(f"🔊 {t['play_audio']}", use_container_width=True):
+    #         try:
+    #             audio_file = generate_tts_audio(simplified, lang='en' if st.session_state.lang == "English" else 'te', speed=st.session_state.audio_rate)
+    #             st.audio(audio_file, format="audio/mp3")
+    #         except Exception as e:
+    #             st.error(f"Audio playback failed: {e}")
+    # with col_download:
+    #     st.download_button(t["download"], simplified, "simplified.txt", use_container_width=True)
+    # with col_copy:
+    #     if st.button("📋 Copy", use_container_width=True):
+    #         st.write("Copied to clipboard!")  # Streamlit doesn't have clipboard, so just show message
+
+    # # Audio controls in dropdown
+    # with st.expander(f"🔊 {t['audio_controls']}"):
+    #     col_play, col_pause, col_mute = st.columns(3)
+    #     with col_play:
+    #         if st.button(f"▶️ {t['play']}", use_container_width=True):
+    #             # Play logic
+    #             pass
+    #     with col_pause:
+    #         if st.button(f"⏸️ {t['pause']}", use_container_width=True):
+    #             # Pause logic
+    #             pass
+    #     with col_mute:
+    #         if st.button(f"🔇 {t['mute']}", use_container_width=True):
+    #             # Mute logic
+    #             pass
+        
+    #     # Speed control with +/- buttons
+    #     st.markdown(f"**{t['speed_control']}**")
+    #     col_speed_minus, col_speed_display, col_speed_plus = st.columns([1, 2, 1])
+        
+    #     with col_speed_minus:
+    #         if st.button("➖", key="speed_minus", help="Decrease speed"):
+    #             st.session_state.audio_rate = max(0.25, st.session_state.audio_rate - 0.1)
+    #             st.rerun()
+        
+    #     with col_speed_display:
+    #         st.markdown(f"""
+    #             <div style='text-align: center; font-size: 18px; font-weight: bold; padding: 8px;'>
+    #                 {st.session_state.audio_rate:.1f}x
+    #             </div>
+    #         """, unsafe_allow_html=True)
+        
+    #     with col_speed_plus:
+    #         if st.button("➕", key="speed_plus", help="Increase speed"):
+    #             st.session_state.audio_rate = min(2.0, st.session_state.audio_rate + 0.1)
+    #             st.rerun()
+    # Audio and Download buttons side by side
     # Audio and Download buttons side by side
     col_audio, col_download, col_copy = st.columns(3)
+
     with col_audio:
         if st.button(f"🔊 {t['play_audio']}", use_container_width=True):
             try:
-                audio_file = generate_tts_audio(simplified, lang='en' if st.session_state.lang == "English" else 'te', speed=st.session_state.audio_rate)
-                st.audio(audio_file, format="audio/mp3")
+                audio_file = generate_tts_audio(
+                    simplified,
+                    lang='en' if st.session_state.lang == "English" else 'te',
+                    speed=st.session_state.audio_rate,
+                )
+                # New audio, so update bytes and version
+                st.session_state.audio_bytes = audio_file.getvalue()
+                st.session_state.audio_action = "play"
+                st.session_state.audio_version += 1  # important: tells JS it's a new clip
             except Exception as e:
                 st.error(f"Audio playback failed: {e}")
+
     with col_download:
-        st.download_button(t["download"], simplified, "simplified.txt", use_container_width=True)
+        st.download_button(
+            t["download"],
+            simplified,
+            "simplified.txt",
+            use_container_width=True,
+        )
+
     with col_copy:
         if st.button("📋 Copy", use_container_width=True):
-            st.write("Copied to clipboard!")  # Streamlit doesn't have clipboard, so just show message
+            st.write("Copied to clipboard!")  # message only
+
 
     # Audio controls in dropdown
     with st.expander(f"🔊 {t['audio_controls']}"):
         col_play, col_pause, col_mute = st.columns(3)
+
         with col_play:
             if st.button(f"▶️ {t['play']}", use_container_width=True):
-                # Play logic
-                pass
+                # If audio not generated yet, generate once
+                if st.session_state.audio_bytes is None:
+                    try:
+                        audio_file = generate_tts_audio(
+                            simplified,
+                            lang='en' if st.session_state.lang == "English" else 'te',
+                            speed=st.session_state.audio_rate,
+                        )
+                        st.session_state.audio_bytes = audio_file.getvalue()
+                        st.session_state.audio_version += 1  # new audio
+                    except Exception as e:
+                        st.error(f"Audio playback failed: {e}")
+                # Just tell JS to play from last stored position
+                st.session_state.audio_action = "play"
+
         with col_pause:
             if st.button(f"⏸️ {t['pause']}", use_container_width=True):
-                # Pause logic
-                pass
+                # TOGGLE: if currently paused, resume; else, pause
+                if st.session_state.audio_action == "pause":
+                    st.session_state.audio_action = "play"
+                else:
+                    st.session_state.audio_action = "pause"
+
         with col_mute:
             if st.button(f"🔇 {t['mute']}", use_container_width=True):
-                # Mute logic
-                pass
-        
+                st.session_state.audio_muted = not st.session_state.audio_muted
+
         # Speed control with +/- buttons
         st.markdown(f"**{t['speed_control']}**")
         col_speed_minus, col_speed_display, col_speed_plus = st.columns([1, 2, 1])
-        
+
         with col_speed_minus:
             if st.button("➖", key="speed_minus", help="Decrease speed"):
                 st.session_state.audio_rate = max(0.25, st.session_state.audio_rate - 0.1)
-                st.rerun()
-        
+                # you can choose to regenerate here manually by hitting main play again
+
         with col_speed_display:
-            st.markdown(f"""
+            st.markdown(
+                f"""
                 <div style='text-align: center; font-size: 18px; font-weight: bold; padding: 8px;'>
                     {st.session_state.audio_rate:.1f}x
                 </div>
-            """, unsafe_allow_html=True)
-        
+                """,
+                unsafe_allow_html=True,
+            )
+
         with col_speed_plus:
             if st.button("➕", key="speed_plus", help="Increase speed"):
                 st.session_state.audio_rate = min(2.0, st.session_state.audio_rate + 0.1)
-                st.rerun()
-        
+
+
+        render_audio_player()
         # Speed control styling and slider
         st.markdown("""
             <style>
@@ -1459,16 +1637,38 @@ def page_result():
         )
 
     # --- Line and Letter Spacing Controls (moved to bottom) ---
-   
-    
     with st.expander(t['text_layout_settings']):
         col_controls = st.columns(2)
         
         # First column: Font and spacing controls
         with col_controls[0]:
-            st.slider(t["font_size_label"], 14, 30, st.session_state.font_size, help="Adjust the font size of the text", key="font_size_slider")
-            st.slider(t["line_spacing_label"], 1.2, 4.0, st.session_state.line_height, step=0.1, key="line_spacing_slider")
-            st.slider(t["letter_spacing_label"], 0.0, 0.3, st.session_state.letter_spacing, step=0.01, key="letter_spacing_slider")
+            font_size = st.slider(
+                t["font_size_label"],
+                14, 30,
+                st.session_state.font_size,
+                help="Adjust the font size of the text",
+                key="font_size_slider",
+            )
+            line_height = st.slider(
+                t["line_spacing_label"],
+                1.2, 4.0,
+                st.session_state.line_height,
+                step=0.1,
+                key="line_spacing_slider",
+            )
+            letter_spacing = st.slider(
+                t["letter_spacing_label"],
+                0.0, 0.3,
+                st.session_state.letter_spacing,
+                step=0.01,
+                key="letter_spacing_slider",
+            )
+
+            # sync back to your main layout state
+            st.session_state.font_size = font_size
+            st.session_state.line_height = line_height
+            st.session_state.letter_spacing = letter_spacing
+    
         
         # Second column: Word count control
         with col_controls[1]:
