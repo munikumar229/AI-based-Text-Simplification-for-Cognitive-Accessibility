@@ -1067,7 +1067,7 @@ def page_examples():
         else "వంద బోధనే తుమ్హి రాజు శాసనే రాష్ట్రం ప్రజల ప్రియమే"
     )
 
-    st.markdown(f"<h3>{t.get('example_texts', 'ఉదాహరణ వచనాలు')}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3>{t.get('Which one is easier ? ', 'ఏది సులభంగా ఉంది?')}</h3>", unsafe_allow_html=True)
 
     # Allow selection via query param: ?examples=left or ?examples=right
     if "examples" in st.query_params:
@@ -1214,7 +1214,7 @@ def page_spacing_examples():
 
     spaced_text = add_spacing(example_text)
 
-    st.markdown(f"<h3>{t.get('example_texts', 'ఉదాహరణ వచనాలు')}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3>{t.get('Which one is easier', 'ఏది సులభంగా ఉంది?')}</h3>", unsafe_allow_html=True)
 
     # Allow selection via query param: ?spacing_examples=left or ?spacing_examples=right
     if "spacing_examples" in st.query_params:
@@ -1232,14 +1232,14 @@ def page_spacing_examples():
     with col1:
         if st.button(example_text, key="normal_btn"):
             st.session_state.dyslexia = False
-            st.session_state.page = "input"
+            st.session_state.page = "questionnarie"
             st.rerun()
         
  
     with col2:
         if st.button(spaced_text, key="space_btn"):
             st.session_state.dyslexia = True
-            st.session_state.page = "input"
+            st.session_state.page = "questionnarie"
             st.rerun()
 
 
