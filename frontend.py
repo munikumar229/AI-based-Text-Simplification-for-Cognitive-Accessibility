@@ -1232,14 +1232,14 @@ def page_spacing_examples():
     with col1:
         if st.button(example_text, key="normal_btn"):
             st.session_state.dyslexia = False
-            st.session_state.page = "questionnarie"
+            st.session_state.page = "questionnaire"
             st.rerun()
         
  
     with col2:
         if st.button(spaced_text, key="space_btn"):
             st.session_state.dyslexia = True
-            st.session_state.page = "questionnarie"
+            st.session_state.page = "questionnaire"
             st.rerun()
 
 
