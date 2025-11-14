@@ -252,6 +252,43 @@ def _basic_simplify_text(txt, simplify_vocab=True, split_sentences=True, target_
     words = txt.split()
     return " ".join(words[:target_words]) + ("..." if len(words) > target_words else "")
 
+# def generate_tts_audio(text, lang='en', speed=1.0):
+#     """
+#     Generate TTS audio for the given text and language using gTTS.
+#     Optionally adjust playback speed using pydub.
+#     Returns a BytesIO object containing the audio data.
+#     """
+#     try:
+#         tts = gTTS(text, lang=lang, slow=False)
+#         audio_file = io.BytesIO()
+#         tts.write_to_fp(audio_file)
+#         audio_file.seek(0)
+
+#         # If speed is not 1.0, adjust using pydub
+#         if speed != 1.0:
+#             # Load audio from BytesIO
+#             audio = AudioSegment.from_mp3(audio_file)
+
+#             # Adjust speed (pydub uses frame_rate for speed control)
+#             # Higher frame_rate = faster playback, lower = slower
+#             original_frame_rate = audio.frame_rate
+#             new_frame_rate = int(original_frame_rate * speed)
+
+#             # Apply speed change
+#             audio = audio._spawn(audio.raw_data, overrides={
+#                 'frame_rate': new_frame_rate
+#             }).set_frame_rate(original_frame_rate)
+
+#             # Export back to BytesIO
+#             output_audio = io.BytesIO()
+#             audio.export(output_audio, format='mp3')
+#             output_audio.seek(0)
+#             return output_audio
+
+#         return audio_file
+#     except Exception as e:
+#         raise Exception(f"TTS generation failed: {e}")
+
 def generate_tts_audio(text, lang='en', speed=1.0):
     """
     Generate TTS audio for the given text and language using gTTS.
@@ -266,20 +303,13 @@ def generate_tts_audio(text, lang='en', speed=1.0):
 
         # If speed is not 1.0, adjust using pydub
         if speed != 1.0:
-            # Load audio from BytesIO
             audio = AudioSegment.from_mp3(audio_file)
-
-            # Adjust speed (pydub uses frame_rate for speed control)
-            # Higher frame_rate = faster playback, lower = slower
             original_frame_rate = audio.frame_rate
             new_frame_rate = int(original_frame_rate * speed)
-
-            # Apply speed change
             audio = audio._spawn(audio.raw_data, overrides={
                 'frame_rate': new_frame_rate
             }).set_frame_rate(original_frame_rate)
 
-            # Export back to BytesIO
             output_audio = io.BytesIO()
             audio.export(output_audio, format='mp3')
             output_audio.seek(0)
