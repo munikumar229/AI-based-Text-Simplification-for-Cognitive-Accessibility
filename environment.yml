@@ -5,6 +5,10 @@ channels:
 dependencies:
   - python=3.8
   - streamlit
+  - transformers
+  - stanza
+  - gtts
+
   - pip
   - pip:
       - re
