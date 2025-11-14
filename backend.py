@@ -269,15 +269,17 @@ def generate_tts_audio(text, lang='en', speed=1.0):
             # Load audio from BytesIO
             audio = AudioSegment.from_mp3(audio_file)
 
-            # Adjust speed (pydub uses frame_rate for speed control)
-            # Higher frame_rate = faster playback, lower = slower
-            original_frame_rate = audio.frame_rate
-            new_frame_rate = int(original_frame_rate * speed)
-
-            # Apply speed change
-            audio = audio._spawn(audio.raw_data, overrides={
-                'frame_rate': new_frame_rate
-            }).set_frame_rate(original_frame_rate)
+            # Use pydub's speedup method for better quality speed adjustment
+            if speed > 1.0:
+                # Speed up
+                audio = audio.speedup(playback_speed=speed)
+            else:
+                # Slow down - pydub doesn't have slowdown, so we use frame rate method
+                original_frame_rate = audio.frame_rate
+                new_frame_rate = int(original_frame_rate * speed)
+                audio = audio._spawn(audio.raw_data, overrides={
+                    'frame_rate': new_frame_rate
+                }).set_frame_rate(original_frame_rate)
 
             # Export back to BytesIO
             output_audio = io.BytesIO()

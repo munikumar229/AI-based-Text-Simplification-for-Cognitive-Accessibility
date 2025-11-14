@@ -38,6 +38,8 @@ def load_user_selection(user, page):
     conn.close()
     return row[0] if row else None
 
+
+
 # Initialize DB
 init_db()
 
@@ -67,6 +69,26 @@ def render_assistive_text(text, lang_code, opts):
         else:
             assisted_words.append(word)
     return ' '.join(assisted_words)
+
+
+def add_spacing(text):
+    words = text.split() 
+    spaced_words = []
+
+    for word in words:
+        # Unicode-safe grapheme split
+        letters = regex.findall(r'\X', word)
+
+        # 1 space between letters
+        spaced_letters = " ".join(letters)
+
+        spaced_words.append(spaced_letters)
+
+    # Join words with **2 spaces**
+    spaced_text = "  ".join(spaced_words)
+    return spaced_text
+
+
 
 # ------------------------------
 # PAGE CONFIG
@@ -479,6 +501,8 @@ def page_welcome():
         if st.button("🚀 Get Started", use_container_width=True):
             st.session_state.page = "language"
             st.rerun()
+
+
 def page_language():
     t = get_texts("English")  # Default to English for language selection page
 
@@ -785,7 +809,8 @@ def page_examples():
             color: #1f2937; 
         }
 
-        .example-card {
+        .st-key-normal_btn div button, 
+        .st-key-bold_btn div button {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -803,17 +828,20 @@ def page_examples():
             line-height: 1.6;
         }
 
-        .example-card:hover {
+        .st-key-normal_btn div button:hover, 
+        .st-key-bold_btn div button:hover {
             transform: scale(1.03);
             box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.12);
         }
 
-        .example-card b {
+        .st-key-normal_btn div button b, 
+        .st-key-bold_btn div button b {
             color: #4c1d95;
             font-weight: 800;
         }
 
-        .example-card p {
+        .st-key-normal_btn div button p, 
+        .st-key-bold_btn div button p {
             margin: 0;
             padding: 0;
             text-align: center;
@@ -852,7 +880,6 @@ def page_examples():
         # rerun to update visual state
         st.rerun()
 
-    selected = st.session_state.get("selected_example", None)
 
     # compute right-card bolding (Unicode-safe)
     words = example_text.split()
@@ -866,18 +893,22 @@ def page_examples():
             bolded_words.append(word)
     bolded_text = " ".join(bolded_words)
 
-    # Card inline style modifier for selection
-    left_border = "border: 3px solid #16a34a;" if selected == "left" else ""
-    right_border = "border: 3px solid #16a34a;" if selected == "right" else ""
+
 
     col1, col2 = st.columns(2)
     with col1:
-        left_html = f"<a href='?examples=left' style='text-decoration:none; color:inherit; display:block;'><div class='example-card' style='{left_border}'><p>{example_text}</p></div></a>"
-        st.markdown(left_html, unsafe_allow_html=True)
-
+        if st.button(example_text, key="normal_btn"):
+            st.session_state.adhd = False
+            st.session_state.page = "spacing_examples"
+            st.rerun()
+        
+ 
     with col2:
-        right_html = f"<a href='?examples=right' style='text-decoration:none; color:inherit; display:block;'><div class='example-card' style='{right_border}'><p>{bolded_text}</p></div></a>"
-        st.markdown(right_html, unsafe_allow_html=True)
+        if st.button(bolded_text, key="bold_btn"):
+            st.session_state.adhd = True
+            st.session_state.page = "spacing_examples"
+            st.rerun()
+
 
     # ------------------- Navigation -------------------
     st.divider()
@@ -886,10 +917,24 @@ def page_examples():
         if st.button(t["back"], use_container_width=True):
             st.session_state.page = "language"
             st.rerun()
-    with col2:
-        if st.button(t["next"], use_container_width=True):
-            st.session_state.page = "spacing_examples"
-            st.rerun()
+    # with col2:
+    #     if st.button(t["next"], use_container_width=True):
+    #         st.session_state.page = "spacing_examples"
+    #         st.rerun()
+
+
+
+    components.html(f"""
+        <script>
+            let bold_btn = window.parent.document.getElementsByClassName("st-key-bold_btn");
+            let div1 = bold_btn[0].children;
+            let btn = div1[0].children;
+            let div2 = btn[0].children;
+            let p = div2[0].children;
+            p[0].innerHTML = `{bolded_text}`;
+        </script>
+        """, height=0)
+
 
 def page_spacing_examples():
     t = get_texts(st.session_state.lang)
@@ -907,7 +952,8 @@ def page_spacing_examples():
             color: #1f2937; 
         }
 
-        .example-card {
+        .st-key-normal_btn div button,
+        .st-key-space_btn div button {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -925,17 +971,20 @@ def page_spacing_examples():
             line-height: 1.6;
         }
 
-        .example-card:hover {
+        .st-key-normal_btn div button:hover,
+        .st-key-space_btn div button:hover {
             transform: scale(1.03);
             box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.12);
         }
 
-        .example-card b {
+        .st-key-normal_btn div button b,
+        .st-key-space_btn div button b{
             color: #4c1d95;
             font-weight: 800;
         }
 
-        .example-card p {
+        .st-key-normal_btn div button div p,
+        .st-key-space_btn div button div p {
             margin: 0;
             padding: 0;
             text-align: center;
@@ -961,6 +1010,10 @@ def page_spacing_examples():
         else "వంద బోధనే తుమ్హి రాజు శాసనే రాష్ట్రం ప్రజల ప్రియమే"
     )
 
+    
+
+    spaced_text = add_spacing(example_text)
+
     st.markdown(f"<h3>{t.get('example_texts', 'ఉదాహరణ వచనాలు')}</h3>", unsafe_allow_html=True)
 
     # Allow selection via query param: ?spacing_examples=left or ?spacing_examples=right
@@ -972,20 +1025,23 @@ def page_spacing_examples():
         st.query_params.clear()
         st.rerun()
 
-    selected = st.session_state.get("selected_spacing_example", None)
 
-    # Card inline style modifier for selection
-    left_border = "border: 3px solid #16a34a;" if selected == "left" else ""
-    right_border = "border: 3px solid #16a34a;" if selected == "right" else ""
+
 
     col1, col2 = st.columns(2)
     with col1:
-        left_html = f"<a href='?spacing_examples=left' style='text-decoration:none; color:inherit; display:block;'><div class='example-card' style='{left_border}'><p>{example_text}</p></div></a>"
-        st.markdown(left_html, unsafe_allow_html=True)
-
+        if st.button(example_text, key="normal_btn"):
+            st.session_state.dyslexia = False
+            st.session_state.page = "input"
+            st.rerun()
+        
+ 
     with col2:
-        right_html = f"<a href='?spacing_examples=right' style='text-decoration:none; color:inherit; display:block;'><div class='example-card' style='{right_border} letter-spacing: 3px;'><p>{example_text}</p></div></a>"
-        st.markdown(right_html, unsafe_allow_html=True)
+        if st.button(spaced_text, key="space_btn"):
+            st.session_state.dyslexia = True
+            st.session_state.page = "input"
+            st.rerun()
+
 
     # ------------------- Navigation -------------------
     st.divider()
@@ -994,15 +1050,23 @@ def page_spacing_examples():
         if st.button(t["back"], use_container_width=True):
             st.session_state.page = "examples"
             st.rerun()
-    with col2:
-        selected_spacing_example = st.session_state.get("selected_spacing_example")
-        if selected_spacing_example:
-            if st.button(t["next"], use_container_width=True):
-                st.session_state.page = "questionnaire"
-                st.rerun()
-        else:
-            st.button(t["next"], use_container_width=True, disabled=True)
-            st.caption("Please select an example text above to continue.")
+    # with col2:
+    #     if st.button(t["next"], use_container_width=True):
+    #         st.session_state.page = "spacing_examples"
+    #         st.rerun()
+
+    # components.html(f"""
+    #     <script>
+    #         let space_btn = window.parent.document.getElementsByClassName("st-key-space_btn");
+    #         let div1 = space_btn[0].children;
+    #         let btn = div1[0].children;
+    #         let div2 = btn[0].children;
+    #         let p = div2[0].children;
+    #         p = p[0]
+            
+    #     </script>
+    #     """, height=0)
+
 
 def page_input():
     t = get_texts(st.session_state.lang)
@@ -1365,10 +1429,10 @@ def page_result():
         # Speed control styling and slider
         st.markdown("""
             <style>
-            div[data-testid="stSlider"][key="audio_rate_slider"] {
+            div[data-testid="stSlider"][key="audio_rate"] {
                 text-align: center;
             }
-            div[data-testid="stSlider"][key="audio_rate_slider"] label {
+            div[data-testid="stSlider"][key="audio_rate"] label {
                 font-size: 16px !important;
                 font-weight: normal !important;
             }
@@ -1391,7 +1455,7 @@ def page_result():
             0.25, 2.0, 
             st.session_state.audio_rate, 
             step=0.1, 
-            key="audio_rate_slider"
+            key="audio_rate"
         )
 
     # --- Line and Letter Spacing Controls (moved to bottom) ---
