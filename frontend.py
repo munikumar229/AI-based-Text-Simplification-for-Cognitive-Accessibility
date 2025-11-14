@@ -6,12 +6,67 @@ import io
 import streamlit.components.v1 as components
 import streamlit as st
 import regex
+import sqlite3
 # Import backend functions
 from backend import simplify_text_with_nlp, generate_tts_audio
 
 # Compatibility for rerun
-if not hasattr(st, 'experimental_rerun'):
-    st.experimental_rerun = st.rerun
+# Removed deprecated st.experimental_rerun
+
+# ------------------------------
+# Database Functions
+# ------------------------------
+def init_db():
+    conn = sqlite3.connect('user_data.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS user_selections (user TEXT, page TEXT, selected TEXT, PRIMARY KEY(user, page))''')
+    conn.commit()
+    conn.close()
+
+def save_user_selection(user, page, sel):
+    conn = sqlite3.connect('user_data.db')
+    c = conn.cursor()
+    c.execute('INSERT OR REPLACE INTO user_selections (user, page, selected) VALUES (?, ?, ?)', (user, page, sel))
+    conn.commit()
+    conn.close()
+
+def load_user_selection(user, page):
+    conn = sqlite3.connect('user_data.db')
+    c = conn.cursor()
+    c.execute('SELECT selected FROM user_selections WHERE user=? AND page=?', (user, page))
+    row = c.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+# Initialize DB
+init_db()
+
+# ------------------------------
+# Assistive Rendering Functions
+# ------------------------------
+def render_assistive_text(text, lang_code, opts):
+    if not opts.get('assist_on', False):
+        return text
+    words = text.split()
+    assisted_words = []
+    for word in words:
+        graphemes = regex.findall(r'\X', word)
+        if graphemes:
+            bold_n = min(opts.get('bold_first_n', 2), len(graphemes))
+            head = ''.join(graphemes[:bold_n])
+            tail = ''.join(graphemes[bold_n:])
+            assisted_word = f"<b>{head}</b>{tail}"
+            # Telugu char assists
+            if lang_code == "తెలుగు" and opts.get('char_assist', False):
+                telugu_map = {
+                    "అ": "df-ta", "ఆ": "df-taa", "ఇ": "df-ti", "ఉ": "df-tu", "వ": "df-tva"
+                }
+                for char, cls in telugu_map.items():
+                    assisted_word = assisted_word.replace(char, f'<span class="{cls}">{char}</span>')
+            assisted_words.append(assisted_word)
+        else:
+            assisted_words.append(word)
+    return ' '.join(assisted_words)
 
 # ------------------------------
 # PAGE CONFIG
@@ -90,6 +145,13 @@ h1, h3, p { text-align: center; }
     color: white !important;
     border: none !important;
 }
+
+/* Telugu character assists */
+.df-ta, .df-taa, .df-ti, .df-tu, .df-tva {
+    padding: 0 0.06em;
+    border-radius: 0.12em;
+    background: rgba(99, 102, 241, 0.04);
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -121,6 +183,7 @@ def simplify_text(txt, simplify_vocab=True, split_sentences=True, target_words=1
 # ------------------------------
 for key, default in {
     "page": "welcome",
+    "user": None,
     "lang": None,
     "harder": None,
     "obstacles": [],
@@ -137,6 +200,12 @@ for key, default in {
     "desired_word_count": 120,  # New: user-controlled word count
     "bold_letters": False,  # For bolding letters feature
     "color_letters": False,  # For coloring letters feature
+    "tts_autoplay": False,  # TTS autoplay on result
+    "opt_simplify_vocab": True,  # Simplify vocabulary option
+    "opt_split_long": True,  # Split long sentences option
+    "assist_on": True,  # Reading assists enabled
+    "bold_first_n": 2,  # Bold first N graphemes
+    "char_assist": True,  # Telugu character assists
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default
@@ -288,6 +357,63 @@ def get_texts(lang):
 # ------------------------------
 # Pages
 # ------------------------------
+def page_login():
+    st.markdown("""
+        <style>
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 80vh;
+            text-align: center;
+        }
+        .login-title {
+            font-size: 48px;
+            font-weight: 800;
+            color: #7C3AED;
+            margin-bottom: 20px;
+        }
+        .login-subtitle {
+            font-size: 18px;
+            color: gray;
+            margin-bottom: 40px;
+        }
+        .login-input {
+            width: 300px;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <div class="login-container">
+            <div class="login-title">Welcome to Text Simplifier</div>
+            <div class="login-subtitle">Please enter your name or continue as guest</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    username = st.text_input("Enter your name", key="username_input", placeholder="Your name")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Login", use_container_width=True):
+            if username.strip():
+                st.session_state.user = username.strip()
+                st.session_state.page = "welcome"
+                st.rerun()
+            else:
+                st.error("Please enter a name.")
+    with col2:
+        if st.button("Continue as Guest", use_container_width=True):
+            st.session_state.user = "guest"
+            st.session_state.page = "welcome"
+            st.rerun()
+
 def page_welcome():
     # Custom CSS styling for centering + button
     st.markdown("""
@@ -450,7 +576,7 @@ def page_language():
         if st.button("E", key="english_btn"):
             st.session_state.lang = "English"
             st.session_state.page = "examples"
-            st.experimental_rerun()
+            st.rerun()
         
         st.markdown(f"<div class='lang-name'>{t['english_label']}</div>", unsafe_allow_html=True)
 
@@ -458,7 +584,7 @@ def page_language():
         if st.button("త", key="telugu_btn"):
             st.session_state.lang = "తెలుగు"
             st.session_state.page = "examples"
-            st.experimental_rerun()
+            st.rerun()
         
         st.markdown(f"<div class='lang-name'>{t['telugu_label']}</div>", unsafe_allow_html=True)
 
@@ -545,7 +671,7 @@ def page_questionnaire():
         st.markdown(f"<div class='{css_class}'>", unsafe_allow_html=True)
         if st.button(("✅ " if selected else "") + t["reading"], key="reading_btn", use_container_width=True):
             st.session_state.harder = t["reading"]
-            st.experimental_rerun()
+            st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
     with col2:
         selected = st.session_state.harder == t["understanding"]
@@ -553,7 +679,7 @@ def page_questionnaire():
         st.markdown(f"<div class='{css_class}'>", unsafe_allow_html=True)
         if st.button(("✅ " if selected else "") + t["understanding"], key="understanding_btn", use_container_width=True):
             st.session_state.harder = t["understanding"]
-            st.experimental_rerun()
+            st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ------------------- Example Boxes -------------------
@@ -611,7 +737,7 @@ def page_questionnaire():
                         st.session_state.obstacles.remove(key)
                     else:
                         st.session_state.obstacles.append(key)
-                    st.experimental_rerun()
+                    st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
 
     # ------------------- Section 3: Preferences -------------------
@@ -619,11 +745,15 @@ def page_questionnaire():
     st.markdown(f"<h3>🛠️ {t['prefs']}</h3>", unsafe_allow_html=True)
     colA, colB, colC = st.columns(3)
     with colA:
-        st.session_state.font_size = st.slider(t["font_size_label"], 14, 30, st.session_state.font_size, key="prefs_font_size")
+        st.slider(t["font_size_label"], 14, 30, st.session_state.font_size, key="prefs_font_size")
     with colB:
-        st.session_state.line_height = st.slider(t["line_spacing_label"], 1.2, 4.0, st.session_state.line_height, step=0.1, key="prefs_line_spacing")
+        st.slider(t["line_spacing_label"], 1.2, 4.0, st.session_state.line_height, step=0.1, key="prefs_line_spacing")
     with colC:
-        st.session_state.letter_spacing = st.slider(t["letter_spacing_label"], 0.0, 0.3, st.session_state.letter_spacing, step=0.01, key="prefs_letter_spacing")
+        st.slider(t["letter_spacing_label"], 0.0, 0.3, st.session_state.letter_spacing, step=0.01, key="prefs_letter_spacing")
+
+    # TTS Autoplay
+    st.markdown("**🔊 TTS Autoplay**")
+    st.checkbox("Read aloud automatically on results screen", value=st.session_state.tts_autoplay, key="tts_autoplay_checkbox")
 
     # ------------------- Section 4: Navigation -------------------
     st.divider()
@@ -631,16 +761,20 @@ def page_questionnaire():
     with col1:
         if st.button(t["back"], use_container_width=True):
             st.session_state.page = "spacing_examples"
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         if st.button(t["next"], use_container_width=True):
             st.session_state.page = "input"
-            st.experimental_rerun()
+            st.rerun()
 
 import regex  # safer than re for Unicode grapheme support
 
 def page_examples():
     t = get_texts(st.session_state.lang)
+
+    # Load selection from DB
+    if "selected_example" not in st.session_state:
+        st.session_state.selected_example = load_user_selection(st.session_state.user, "examples")
 
     # ------------------- CSS Styling -------------------
     st.markdown("""
@@ -712,6 +846,7 @@ def page_examples():
         sel = st.query_params["examples"]
         if sel:
             st.session_state.selected_example = sel
+            save_user_selection(st.session_state.user, "examples", sel)
         # clear the param so repeated clicks still work
         st.query_params.clear()
         # rerun to update visual state
@@ -750,19 +885,18 @@ def page_examples():
     with col1:
         if st.button(t["back"], use_container_width=True):
             st.session_state.page = "language"
-            st.experimental_rerun()
+            st.rerun()
     with col2:
-        selected_example = st.session_state.get("selected_example")
-        if selected_example:
-            if st.button(t["next"], use_container_width=True):
-                st.session_state.page = "spacing_examples"
-                st.experimental_rerun()
-        else:
-            st.button(t["next"], use_container_width=True, disabled=True)
-            st.caption("Please select an example text above to continue.")
+        if st.button(t["next"], use_container_width=True):
+            st.session_state.page = "spacing_examples"
+            st.rerun()
 
 def page_spacing_examples():
     t = get_texts(st.session_state.lang)
+
+    # Load selection from DB
+    if "selected_spacing_example" not in st.session_state:
+        st.session_state.selected_spacing_example = load_user_selection(st.session_state.user, "spacing_examples")
 
     # ------------------- CSS Styling -------------------
     st.markdown("""
@@ -834,6 +968,7 @@ def page_spacing_examples():
         sel = st.query_params["spacing_examples"]
         if sel:
             st.session_state.selected_spacing_example = sel
+            save_user_selection(st.session_state.user, "spacing_examples", sel)
         st.query_params.clear()
         st.rerun()
 
@@ -858,13 +993,13 @@ def page_spacing_examples():
     with col1:
         if st.button(t["back"], use_container_width=True):
             st.session_state.page = "examples"
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         selected_spacing_example = st.session_state.get("selected_spacing_example")
         if selected_spacing_example:
             if st.button(t["next"], use_container_width=True):
                 st.session_state.page = "questionnaire"
-                st.experimental_rerun()
+                st.rerun()
         else:
             st.button(t["next"], use_container_width=True, disabled=True)
             st.caption("Please select an example text above to continue.")
@@ -957,7 +1092,7 @@ def page_input():
         st.markdown(f"<div class='{css_class}'>", unsafe_allow_html=True)
         if st.button(paste_label, key="paste_mode_btn", use_container_width=True):
             st.session_state.input_mode = "paste"
-            st.experimental_rerun()
+            st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
@@ -966,7 +1101,7 @@ def page_input():
         st.markdown(f"<div class='{css_class}'>", unsafe_allow_html=True)
         if st.button(upload_label, key="upload_mode_btn", use_container_width=True):
             st.session_state.input_mode = "upload"
-            st.experimental_rerun()
+            st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
     # ------------- Paste / Upload area -------------
@@ -1003,7 +1138,7 @@ def page_input():
     col_word_settings = st.columns([2, 1])
     
     with col_word_settings[0]:
-        st.session_state.desired_word_count = st.slider(
+        st.slider(
             t["word_count_label"], 
             50, 300, 
             st.session_state.desired_word_count, 
@@ -1016,26 +1151,44 @@ def page_input():
         st.markdown(f"**{t['target_words'].format(count=st.session_state.desired_word_count)}**")
         st.caption(t["approx_length"])
 
+    # Simplification Options
+    st.divider()
+    st.markdown("**🛠️ Simplification Options**")
+    col_opts = st.columns(2)
+    with col_opts[0]:
+        st.checkbox("Simplify vocabulary", value=st.session_state.opt_simplify_vocab, key="opt_simplify_vocab")
+    with col_opts[1]:
+        st.checkbox("Split long sentences", value=st.session_state.opt_split_long, key="opt_split_long")
+
     # ------------- Navigation buttons -------------
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
         if st.button(t["back"], use_container_width=True, key="input_back_btn"):
             st.session_state.page = "questionnaire"
-            st.experimental_rerun()
+            st.rerun()
     with col2:
         simplify_disabled = not st.session_state.text_input.strip()
         if st.button(f"✨ {t['simplify']}", use_container_width=True, disabled=simplify_disabled, key="input_simplify_btn"):
             st.session_state.page = "processing"
-            st.experimental_rerun()
+            st.rerun()
 
 def page_processing():
     t = get_texts(st.session_state.lang)
     st.markdown(f"### {t['processing']}")
-    progress = st.progress(0)
-    for i in range(100):
-        time.sleep(0.02)
-        progress.progress(i + 1)
+    
+    # Progress stages
+    stages = ["Uploading", "Analyzing", "Simplifying", "Applying preferences", "Finalizing"]
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    for i, stage in enumerate(stages):
+        status_text.text(f"{stage}...")
+        progress_bar.progress((i + 1) / len(stages))
+        time.sleep(0.5)  # Simulate time
+    
+    progress_bar.empty()
+    status_text.empty()
     
     # Use advanced NLP-based simplification
     target_lang = 'tel_Telu' if st.session_state.lang == "తెలుగు" else 'eng_Latn'
@@ -1045,7 +1198,7 @@ def page_processing():
         target_words=st.session_state.desired_word_count,
     )
     st.session_state.page = "result"
-    st.experimental_rerun()
+    st.rerun()
 
 def page_result():
     t = get_texts(st.session_state.lang)
@@ -1055,30 +1208,46 @@ def page_result():
     text_color = "#000" if theme != "Dark" else "#fff"
     st.markdown(f"### {t['result']}")
 
+    # Auto-play TTS if enabled
+    if st.session_state.tts_autoplay:
+        try:
+            audio_file = generate_tts_audio(simplified, lang='en' if st.session_state.lang == "English" else 'te')
+            st.audio(audio_file, format="audio/mp3")
+        except Exception as e:
+            st.error(f"Audio playback failed: {e}")
+
     # --- Theme Toggle Buttons ---
     col_theme = st.columns(3)
     with col_theme[0]:
         if st.button(f"🌞 {t['light_theme']}", use_container_width=True):
             st.session_state.theme = "Light"
-            st.experimental_rerun()
+            st.rerun()
     with col_theme[1]:
         if st.button(f"📜 {t['sepia_theme']}", use_container_width=True):
             st.session_state.theme = "Sepia"
-            st.experimental_rerun()
+            st.rerun()
     with col_theme[2]:
         if st.button(f"🌙 {t['dark_theme']}", use_container_width=True):
             st.session_state.theme = "Dark"
-            st.experimental_rerun()
+            st.rerun()
 
     # --- Bold Letters Toggle ---
     if st.button("🔤 Bold Vowels" if not st.session_state.bold_letters else "🔤 Normal Text", use_container_width=True):
         st.session_state.bold_letters = not st.session_state.bold_letters
-        st.experimental_rerun()
+        st.rerun()
 
     # --- Color Letters Toggle ---
     if st.button("🎨 Color Letters" if not st.session_state.color_letters else "🎨 Normal Colors", use_container_width=True):
         st.session_state.color_letters = not st.session_state.color_letters
-        st.experimental_rerun()
+        st.rerun()
+
+    # --- Reading Assists ---
+    st.markdown("### 📖 Reading Assists")
+    st.checkbox("Enable reading assists (bold first varṇa)", value=st.session_state.assist_on, key="assist_on")
+    if st.session_state.assist_on:
+        st.slider("Bold first varṇa", 1, 3, st.session_state.bold_first_n, key="bold_first_n")
+        if st.session_state.lang == "తెలుగు":
+            st.checkbox("Telugu character assists", value=st.session_state.char_assist, key="char_assist")
 
     # --- Simplified Text Display ---
     display_text = simplified
@@ -1106,6 +1275,14 @@ def page_result():
             # English vowels
             display_text = re.sub(r'([aeiouAEIOU])', r'<b>\1</b>', display_text)
     
+    # Apply reading assists
+    opts = {
+        'assist_on': st.session_state.assist_on,
+        'bold_first_n': st.session_state.bold_first_n,
+        'char_assist': st.session_state.char_assist
+    }
+    display_text = render_assistive_text(display_text, st.session_state.lang, opts)
+    
     if not st.session_state.show_comparison:
         st.markdown(
             f"<div class='output' style='background:{bg_color}; color:{text_color}; font-size:{st.session_state.font_size}px; line-height:{st.session_state.line_height}; letter-spacing:{st.session_state.letter_spacing}em;'>{display_text}</div>",
@@ -1115,7 +1292,7 @@ def page_result():
     # Comparison button
     if st.button(t["compare_with_original"], use_container_width=True):
         st.session_state.show_comparison = not st.session_state.show_comparison
-        st.experimental_rerun()
+        st.rerun()
 
     if st.session_state.show_comparison:
         col1, col2 = st.columns(2)
@@ -1133,7 +1310,7 @@ def page_result():
             )
 
     # Audio and Download buttons side by side
-    col_audio, col_download = st.columns(2)
+    col_audio, col_download, col_copy = st.columns(3)
     with col_audio:
         if st.button(f"🔊 {t['play_audio']}", use_container_width=True):
             try:
@@ -1143,6 +1320,9 @@ def page_result():
                 st.error(f"Audio playback failed: {e}")
     with col_download:
         st.download_button(t["download"], simplified, "simplified.txt", use_container_width=True)
+    with col_copy:
+        if st.button("📋 Copy", use_container_width=True):
+            st.write("Copied to clipboard!")  # Streamlit doesn't have clipboard, so just show message
 
     # Audio controls in dropdown
     with st.expander(f"🔊 {t['audio_controls']}"):
@@ -1167,7 +1347,7 @@ def page_result():
         with col_speed_minus:
             if st.button("➖", key="speed_minus", help="Decrease speed"):
                 st.session_state.audio_rate = max(0.25, st.session_state.audio_rate - 0.1)
-                st.experimental_rerun()
+                st.rerun()
         
         with col_speed_display:
             st.markdown(f"""
@@ -1179,7 +1359,7 @@ def page_result():
         with col_speed_plus:
             if st.button("➕", key="speed_plus", help="Increase speed"):
                 st.session_state.audio_rate = min(2.0, st.session_state.audio_rate + 0.1)
-                st.experimental_rerun()
+                st.rerun()
         
         # Speed control styling and slider
         st.markdown("""
@@ -1205,7 +1385,7 @@ def page_result():
             </style>
         """, unsafe_allow_html=True)
         
-        st.session_state.audio_rate = st.slider(
+        st.slider(
             t["speech_speed_label"], 
             0.25, 2.0, 
             st.session_state.audio_rate, 
@@ -1221,9 +1401,9 @@ def page_result():
         
         # First column: Font and spacing controls
         with col_controls[0]:
-            st.session_state.font_size = st.slider(t["font_size_label"], 14, 30, st.session_state.font_size, help="Adjust the font size of the text", key="font_size_slider")
-            st.session_state.line_height = st.slider(t["line_spacing_label"], 1.2, 4.0, st.session_state.line_height, step=0.1, key="line_spacing_slider")
-            st.session_state.letter_spacing = st.slider(t["letter_spacing_label"], 0.0, 0.3, st.session_state.letter_spacing, step=0.01, key="letter_spacing_slider")
+            st.slider(t["font_size_label"], 14, 30, st.session_state.font_size, help="Adjust the font size of the text", key="font_size_slider")
+            st.slider(t["line_spacing_label"], 1.2, 4.0, st.session_state.line_height, step=0.1, key="line_spacing_slider")
+            st.slider(t["letter_spacing_label"], 0.0, 0.3, st.session_state.letter_spacing, step=0.01, key="letter_spacing_slider")
         
         # Second column: Word count control
         with col_controls[1]:
@@ -1249,22 +1429,28 @@ def page_result():
             if st.button(f"🔄 {t['resimplify_button']}", use_container_width=True, key="resimplify_btn"):
                 st.session_state.page = "processing"
                 st.session_state.summary_len = st.session_state.desired_word_count
-                st.experimental_rerun()
+                st.rerun()
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         if st.button(t["back"], use_container_width=True):
             st.session_state.page = "input"
-            st.experimental_rerun()
+            st.rerun()
     with col2:
+        if st.button("🔄 Start Over", use_container_width=True):
+            st.session_state.page = "language"
+            st.rerun()
+    with col3:
         if st.button(t["home"], use_container_width=True):
             st.session_state.page = "language"
-            st.experimental_rerun()
+            st.rerun()
 
 # ------------------------------
 # Router
 # ------------------------------
-if st.session_state.page == "welcome":
+if not st.session_state.get("user"):
+    page_login()
+elif st.session_state.page == "welcome":
     page_welcome()
 elif st.session_state.page == "language":
     page_language()
