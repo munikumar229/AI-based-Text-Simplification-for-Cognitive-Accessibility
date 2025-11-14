@@ -1251,6 +1251,15 @@ def page_result():
 
     # --- Simplified Text Display ---
     display_text = simplified
+    
+    # Apply reading assists first (to plain text)
+    opts = {
+        'assist_on': st.session_state.assist_on,
+        'bold_first_n': st.session_state.bold_first_n,
+        'char_assist': st.session_state.char_assist
+    }
+    display_text = render_assistive_text(display_text, st.session_state.lang, opts)
+    
     if st.session_state.color_letters:
         import re
         colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan', 'magenta', 'lime', 'teal', 'navy', 'maroon', 'silver', 'gold', 'indigo', 'violet', 'turquoise']
@@ -1274,14 +1283,6 @@ def page_result():
         else:
             # English vowels
             display_text = re.sub(r'([aeiouAEIOU])', r'<b>\1</b>', display_text)
-    
-    # Apply reading assists
-    opts = {
-        'assist_on': st.session_state.assist_on,
-        'bold_first_n': st.session_state.bold_first_n,
-        'char_assist': st.session_state.char_assist
-    }
-    display_text = render_assistive_text(display_text, st.session_state.lang, opts)
     
     if not st.session_state.show_comparison:
         st.markdown(
