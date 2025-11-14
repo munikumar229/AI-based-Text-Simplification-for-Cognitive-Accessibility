@@ -261,9 +261,7 @@ def generate_tts_audio(text, lang='en'):
         # Create a temporary file for output
         with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
             output_file = temp_file.name
-        
-        # Prepare the command
-        # Assuming Fastspeech2_HS is in the workspace or adjust path as needed
+    
         fastspeech_path = "Fastspeech2_HS"  # Adjust if different
         cmd = [
             "python", "inference.py",
