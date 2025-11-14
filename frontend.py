@@ -4,7 +4,8 @@ from io import StringIO
 import pyttsx3
 import io
 import streamlit.components.v1 as components
-
+import streamlit as st
+import regex
 # Import backend functions
 from backend import simplify_text_with_nlp, generate_tts_audio
 
@@ -135,6 +136,7 @@ for key, default in {
     "show_comparison": False,
     "desired_word_count": 120,  # New: user-controlled word count
     "bold_letters": False,  # For bolding letters feature
+    "color_letters": False,  # For coloring letters feature
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default
@@ -210,6 +212,7 @@ def get_texts(lang):
             "approx_length": "This will be the approximate length of your simplified text",
             "word_count_help": "Set the desired number of words in the simplified text",
             "adjust_word_count": "Adjust the number of words in the simplified text",
+            "example_texts": "Example Texts",
         }
 
     else:
@@ -279,6 +282,7 @@ def get_texts(lang):
             "approx_length": "ఇది మీ సరళీకృత పాఠ్యం యొక్క సుమారు పొడవు అవుతుంది",
             "word_count_help": "సరళీకృత పాఠ్యంలో కావలసిన పదాల సంఖ్యను సెట్ చేయండి",
             "adjust_word_count": "సరళీకృత పాఠ్యంలో పదాల సంఖ్యను సర్దుబాటు చేయండి",
+            "example_texts": "ఉదాహరణ వచనాలు",
         }
 
 # ------------------------------
@@ -445,7 +449,7 @@ def page_language():
     with col1:
         if st.button("E", key="english_btn"):
             st.session_state.lang = "English"
-            st.session_state.page = "questionnaire"
+            st.session_state.page = "examples"
             st.experimental_rerun()
         
         st.markdown(f"<div class='lang-name'>{t['english_label']}</div>", unsafe_allow_html=True)
@@ -453,7 +457,7 @@ def page_language():
     with col2:
         if st.button("త", key="telugu_btn"):
             st.session_state.lang = "తెలుగు"
-            st.session_state.page = "questionnaire"
+            st.session_state.page = "examples"
             st.experimental_rerun()
         
         st.markdown(f"<div class='lang-name'>{t['telugu_label']}</div>", unsafe_allow_html=True)
@@ -552,6 +556,24 @@ def page_questionnaire():
             st.experimental_rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
+    # ------------------- Example Boxes -------------------
+    example_text = "The quick brown fox jumps over the lazy dog." if st.session_state.lang == "English" else "వంద బోధనే తుమ్హి రాజు శాసనే రాష్ట్రం ప్రజల ప్రియమే"
+    st.markdown(f"<h3>{t['example_texts']}</h3>", unsafe_allow_html=True)
+    col_example1, col_example2 = st.columns(2)
+    with col_example1:
+        st.markdown(f"""
+        <div class='lang-card' style='display: flex; align-items: center; justify-content: center; font-size: 18px; text-align: center;'>
+        {example_text}
+        </div>
+        """, unsafe_allow_html=True)
+    with col_example2:
+        letter_spacing = "letter-spacing: 3px;" if st.session_state.lang != "English" else ""
+        st.markdown(f"""
+        <div class='lang-card' style='display: flex; align-items: center; justify-content: center; font-size: 18px; text-align: center; {letter_spacing}'>
+        {example_text}
+        </div>
+        """, unsafe_allow_html=True)
+
     # ------------------- Section 2: Obstacles -------------------
     st.markdown(f"<h3 style='margin-top:30px;'>{t['obstacles']}</h3>", unsafe_allow_html=True)
 
@@ -608,12 +630,244 @@ def page_questionnaire():
     col1, col2 = st.columns(2)
     with col1:
         if st.button(t["back"], use_container_width=True):
-            st.session_state.page = "language"
+            st.session_state.page = "spacing_examples"
             st.experimental_rerun()
     with col2:
         if st.button(t["next"], use_container_width=True):
             st.session_state.page = "input"
             st.experimental_rerun()
+
+import regex  # safer than re for Unicode grapheme support
+
+def page_examples():
+    t = get_texts(st.session_state.lang)
+
+    # ------------------- CSS Styling -------------------
+    st.markdown("""
+        <style>
+        h3 { 
+            text-align: center; 
+            font-weight: 800; 
+            color: #1f2937; 
+        }
+
+        .example-card {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 220px;
+            font-size: 18px;
+            background-color: #f3e8ff;
+            border-radius: 25px;
+            padding: 25px;
+            margin: 10px;
+            box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease-in-out;
+            word-wrap: break-word;
+            white-space: normal;
+            line-height: 1.6;
+        }
+
+        .example-card:hover {
+            transform: scale(1.03);
+            box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .example-card b {
+            color: #4c1d95;
+            font-weight: 800;
+        }
+
+        .example-card p {
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .stButton > button {
+            border-radius: 10px !important;
+            height: 45px !important;
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            border: 1px solid #ccc !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # ------------------- Example Text -------------------
+    example_text = (
+        "The quick brown fox jumps over the lazy dog."
+        if st.session_state.lang == "English"
+        else "వంద బోధనే తుమ్హి రాజు శాసనే రాష్ట్రం ప్రజల ప్రియమే"
+    )
+
+    st.markdown(f"<h3>{t.get('example_texts', 'ఉదాహరణ వచనాలు')}</h3>", unsafe_allow_html=True)
+
+    # Allow selection via query param: ?examples=left or ?examples=right
+    if "examples" in st.query_params:
+        sel = st.query_params["examples"]
+        if sel:
+            st.session_state.selected_example = sel
+        # clear the param so repeated clicks still work
+        st.query_params.clear()
+        # rerun to update visual state
+        st.rerun()
+
+    selected = st.session_state.get("selected_example", None)
+
+    # compute right-card bolding (Unicode-safe)
+    words = example_text.split()
+    bolded_words = []
+    for word in words:
+        graphemes = regex.findall(r'\X', word)
+        if graphemes:
+            bolded_word = f"<b>{graphemes[0]}</b>{''.join(graphemes[1:])}"
+            bolded_words.append(bolded_word)
+        else:
+            bolded_words.append(word)
+    bolded_text = " ".join(bolded_words)
+
+    # Card inline style modifier for selection
+    left_border = "border: 3px solid #16a34a;" if selected == "left" else ""
+    right_border = "border: 3px solid #16a34a;" if selected == "right" else ""
+
+    col1, col2 = st.columns(2)
+    with col1:
+        left_html = f"<a href='?examples=left' style='text-decoration:none; color:inherit; display:block;'><div class='example-card' style='{left_border}'><p>{example_text}</p></div></a>"
+        st.markdown(left_html, unsafe_allow_html=True)
+
+    with col2:
+        right_html = f"<a href='?examples=right' style='text-decoration:none; color:inherit; display:block;'><div class='example-card' style='{right_border}'><p>{bolded_text}</p></div></a>"
+        st.markdown(right_html, unsafe_allow_html=True)
+
+    # ------------------- Navigation -------------------
+    st.divider()
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(t["back"], use_container_width=True):
+            st.session_state.page = "language"
+            st.experimental_rerun()
+    with col2:
+        selected_example = st.session_state.get("selected_example")
+        if selected_example:
+            if st.button(t["next"], use_container_width=True):
+                st.session_state.page = "spacing_examples"
+                st.experimental_rerun()
+        else:
+            st.button(t["next"], use_container_width=True, disabled=True)
+            st.caption("Please select an example text above to continue.")
+
+def page_spacing_examples():
+    t = get_texts(st.session_state.lang)
+
+    # ------------------- CSS Styling -------------------
+    st.markdown("""
+        <style>
+        h3 { 
+            text-align: center; 
+            font-weight: 800; 
+            color: #1f2937; 
+        }
+
+        .example-card {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 220px;
+            font-size: 18px;
+            background-color: #f3e8ff;
+            border-radius: 25px;
+            padding: 25px;
+            margin: 10px;
+            box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease-in-out;
+            word-wrap: break-word;
+            white-space: normal;
+            line-height: 1.6;
+        }
+
+        .example-card:hover {
+            transform: scale(1.03);
+            box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .example-card b {
+            color: #4c1d95;
+            font-weight: 800;
+        }
+
+        .example-card p {
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .stButton > button {
+            border-radius: 10px !important;
+            height: 45px !important;
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            border: 1px solid #ccc !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # ------------------- Example Text -------------------
+    example_text = (
+        "The quick brown fox jumps over the lazy dog."
+        if st.session_state.lang == "English"
+        else "వంద బోధనే తుమ్హి రాజు శాసనే రాష్ట్రం ప్రజల ప్రియమే"
+    )
+
+    st.markdown(f"<h3>{t.get('example_texts', 'ఉదాహరణ వచనాలు')}</h3>", unsafe_allow_html=True)
+
+    # Allow selection via query param: ?spacing_examples=left or ?spacing_examples=right
+    if "spacing_examples" in st.query_params:
+        sel = st.query_params["spacing_examples"]
+        if sel:
+            st.session_state.selected_spacing_example = sel
+        st.query_params.clear()
+        st.rerun()
+
+    selected = st.session_state.get("selected_spacing_example", None)
+
+    # Card inline style modifier for selection
+    left_border = "border: 3px solid #16a34a;" if selected == "left" else ""
+    right_border = "border: 3px solid #16a34a;" if selected == "right" else ""
+
+    col1, col2 = st.columns(2)
+    with col1:
+        left_html = f"<a href='?spacing_examples=left' style='text-decoration:none; color:inherit; display:block;'><div class='example-card' style='{left_border}'><p>{example_text}</p></div></a>"
+        st.markdown(left_html, unsafe_allow_html=True)
+
+    with col2:
+        right_html = f"<a href='?spacing_examples=right' style='text-decoration:none; color:inherit; display:block;'><div class='example-card' style='{right_border} letter-spacing: 3px;'><p>{example_text}</p></div></a>"
+        st.markdown(right_html, unsafe_allow_html=True)
+
+    # ------------------- Navigation -------------------
+    st.divider()
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(t["back"], use_container_width=True):
+            st.session_state.page = "examples"
+            st.experimental_rerun()
+    with col2:
+        selected_spacing_example = st.session_state.get("selected_spacing_example")
+        if selected_spacing_example:
+            if st.button(t["next"], use_container_width=True):
+                st.session_state.page = "questionnaire"
+                st.experimental_rerun()
+        else:
+            st.button(t["next"], use_container_width=True, disabled=True)
+            st.caption("Please select an example text above to continue.")
 
 def page_input():
     t = get_texts(st.session_state.lang)
@@ -821,8 +1075,28 @@ def page_result():
         st.session_state.bold_letters = not st.session_state.bold_letters
         st.experimental_rerun()
 
+    # --- Color Letters Toggle ---
+    if st.button("🎨 Color Letters" if not st.session_state.color_letters else "🎨 Normal Colors", use_container_width=True):
+        st.session_state.color_letters = not st.session_state.color_letters
+        st.experimental_rerun()
+
     # --- Simplified Text Display ---
     display_text = simplified
+    if st.session_state.color_letters:
+        import re
+        colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan', 'magenta', 'lime', 'teal', 'navy', 'maroon', 'silver', 'gold', 'indigo', 'violet', 'turquoise']
+        color_map = {}
+        color_index = 0
+        def color_replacer(match):
+            nonlocal color_index
+            char = match.group(0)
+            if char not in color_map:
+                color_map[char] = colors[color_index % len(colors)]
+                color_index += 1
+            return f'<span style="color: {color_map[char]}">{char}</span>'
+        if st.session_state.lang == "English":
+            display_text = re.sub(r'([a-zA-Z])', color_replacer, display_text)
+    
     if st.session_state.bold_letters:
         import re
         if st.session_state.lang == "తెలుగు":
@@ -996,6 +1270,10 @@ elif st.session_state.page == "language":
     page_language()
 elif st.session_state.page == "questionnaire":
     page_questionnaire()
+elif st.session_state.page == "examples":
+    page_examples()
+elif st.session_state.page == "spacing_examples":
+    page_spacing_examples()
 elif st.session_state.page == "input":
     page_input()
 elif st.session_state.page == "processing":
