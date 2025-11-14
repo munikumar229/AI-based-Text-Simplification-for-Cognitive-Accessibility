@@ -1573,16 +1573,38 @@ def page_result():
         )
 
     # --- Line and Letter Spacing Controls (moved to bottom) ---
-   
-    
     with st.expander(t['text_layout_settings']):
         col_controls = st.columns(2)
         
         # First column: Font and spacing controls
         with col_controls[0]:
-            st.slider(t["font_size_label"], 14, 30, st.session_state.font_size, help="Adjust the font size of the text", key="font_size_slider")
-            st.slider(t["line_spacing_label"], 1.2, 4.0, st.session_state.line_height, step=0.1, key="line_spacing_slider")
-            st.slider(t["letter_spacing_label"], 0.0, 0.3, st.session_state.letter_spacing, step=0.01, key="letter_spacing_slider")
+            font_size = st.slider(
+                t["font_size_label"],
+                14, 30,
+                st.session_state.font_size,
+                help="Adjust the font size of the text",
+                key="font_size_slider",
+            )
+            line_height = st.slider(
+                t["line_spacing_label"],
+                1.2, 4.0,
+                st.session_state.line_height,
+                step=0.1,
+                key="line_spacing_slider",
+            )
+            letter_spacing = st.slider(
+                t["letter_spacing_label"],
+                0.0, 0.3,
+                st.session_state.letter_spacing,
+                step=0.01,
+                key="letter_spacing_slider",
+            )
+
+            # sync back to your main layout state
+            st.session_state.font_size = font_size
+            st.session_state.line_height = line_height
+            st.session_state.letter_spacing = letter_spacing
+    
         
         # Second column: Word count control
         with col_controls[1]:
