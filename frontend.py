@@ -355,6 +355,7 @@ def get_texts(lang):
             "result": "🪄 Simplified Output",
             "reading_assist": "Reading Assist",
             "download": "⬇️ Download Simplified Text",
+            "download_audio": "⬇️ Download Audio",
             "back": "⬅️ Back",
             "next": "➡️ Next",
             "theme": "Theme",
@@ -426,6 +427,7 @@ def get_texts(lang):
             "result": "🪄 సరళీకృత పాఠ్యం",
             "reading_assist": "పఠన సహాయం",
             "download": "⬇️ సరళీకృత పాఠ్యాన్ని డౌన్‌లోడ్ చేయి",
+            "download_audio": "⬇️ ఆడియో డౌన్‌లోడ్ చేయి",
             "back": "⬅️ వెనక్కి",
             "next": "➡️ ముందుకు",
             "theme": "థీమ్",
@@ -1703,16 +1705,36 @@ def page_result():
                 st.error(f"Audio playback failed: {e}")
 
     with col_download:
+        # Audio download button (enabled only after audio is generated)
+        if st.session_state.audio_bytes is not None:
+            st.download_button(
+                label=f"⬇️ {t['download_audio']}",
+                data=st.session_state.audio_bytes,
+                file_name="simplified_tts.mp3",
+                mime="audio/mpeg",
+                use_container_width=True,
+            )
+        else:
+            st.download_button(
+                label=f"⬇️ {t['download_audio']}",
+                data=b"",  # empty
+                disabled=True,
+                use_container_width=True,
+            )
+
+        # Text download button
         st.download_button(
-            t["download"],
-            simplified,
-            "simplified.txt",
+            label=f"⬇️ {t['download']}",
+            data=simplified,
+            file_name="simplified.txt",
             use_container_width=True,
         )
+
 
     with col_copy:
         if st.button("📋 Copy", use_container_width=True):
             st.write("Copied to clipboard!")  # message only
+
 
 
     # Audio controls in dropdown
