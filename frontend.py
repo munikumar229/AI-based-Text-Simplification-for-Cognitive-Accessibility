@@ -673,72 +673,137 @@ def page_telugu_login():
             st.session_state.page = "bold_examples"
             st.rerun()
 
+def load_base64_image(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+
+def render_header():
+    logo64 = load_base64_image(
+        "/home/kaloori.shiva/AI-based-Text-Simplification-for-Cognitive-Accessibility/logo_hci.png"
+    )
+
+    html = f"""
+    <div style="
+        width:100%;
+        padding:12px 30px;
+        background:white;
+        border-bottom:1px solid #e5e7eb;
+        position:sticky;
+        top:0;
+        z-index:999;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+    ">
+
+        <div style='width:33%; display:flex; align-items:center;'>
+            <img src="data:image/png;base64,{logo64}" style="height:45px;">
+        </div>
+
+        <div style='width:43%; text-align:center; font-size:20px; font-weight:600; color:#374151;'>
+            Text-Simplification-Solutions
+        </div>
+
+        <div style='width:33%;'></div>
+
+    </div>
+    """
+
+    st.components.v1.html(html, height=70)
+
+
 def page_welcome():
+
+    # Render your custom header if needed
+    render_header()
+
+    # Load the hero background as Base64
+    img64 = load_base64_image(
+        "/home/kaloori.shiva/AI-based-Text-Simplification-for-Cognitive-Accessibility/welcome.png"
+    )
     
-    # Custom CSS styling for centering + button
+
+    # CSS for hero wrapper
     st.markdown("""
         <style>
-        /* Center the whole page vertically and horizontally */
-        .welcome-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 40vh;
-            text-align: center;
-        }
+            .hero-wrapper {
+                width: 100%;
+                height: 500px;
+                border-radius: 15px;
+                overflow: hidden;
+                margin-top: 20px;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
-        /* Title styling */
-        .welcome-title {
-            font-size: 52px;
-            font-weight: 800;
-            color: #7C3AED;
-            margin-bottom: 15px;
-        }
+    # Pure HTML hero section
+    html_code = f"""
+    <div style="
+        position:relative;
+        width:100%;
+        height:500px;
+        border-radius:15px;
+        background-image:url('data:image/png;base64,{img64}');
+        background-size:cover;
+        background-position:center;
+    ">
 
-        /* Subtitle styling */
-        .welcome-subtitle {
-            font-size: 20px;
-            color: gray;
-            margin-bottom: 40px;
-        }
+        <!-- Dark overlay -->
+        <div style="
+            position:absolute; 
+            top:0; left:0; 
+            width:100%; height:100%;
+            background:rgba(255,255,255,0.45);
+        "></div>
 
-        /* Custom Streamlit button styling */
+        <!-- Hero text -->
+        <div style="
+            position:absolute;
+            top:50%; left:7%;
+            transform:translateY(-50%);
+            color:black;
+        ">
+            <div style="font-size:55px; font-weight:900; line-height:1.1;">
+                Accessibility <br>
+                first Learning<br>
+                for everyone
+            </div>
+
+        </div>
+    </div>
+    """
+
+    # Render HTML hero safely
+    st.components.v1.html(html_code, height=520)
+    # Green button styling for "Get Started"
+    st.markdown("""
+        <style>
         div[data-testid="stButton"] > button {
-            background-color: #22c55e !important;
+            background-color: #22c55e !important;  /* Green */
             color: white !important;
             border: none !important;
-            padding: 15px 40px !important;
+            border-radius: 10px !important;
+            height: 50px !important;
             font-size: 20px !important;
             font-weight: 600 !important;
-            border-radius: 12px !important;
-            cursor: pointer !important;
-            transition: all 0.25s ease-in-out !important;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.1) !important;
+            transition: 0.2s;
         }
         div[data-testid="stButton"] > button:hover {
-            transform: scale(1.05);
-            background-color: #16a34a !important;
+            background-color: #16a34a !important; /* Darker green */
+            transform: scale(1.03);
         }
         </style>
     """, unsafe_allow_html=True)
 
-    # Centered layout
-    st.markdown("""
-        <div class="welcome-container">
-            <div class="welcome-title">🧠 Text Simplifier</div>
-            <div class="welcome-subtitle">
-                AI-powered Text Simplifier • English & Telugu • Reading Assist • TTS
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # Center the button below content
+    # Centered Get Started button
     _, col, _ = st.columns([1, 2, 1])
     with col:
-        if st.button("🚀 Get Started", use_container_width=True):
+        if st.button("Get Started", use_container_width=True):
             st.session_state.page = "language"
             st.rerun()
+
+
 
 
 def page_language():
