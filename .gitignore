@@ -66,3 +66,5 @@ venv/
 _pycache__/
 __pycache__/
 *.pyc
+
+user_data.db
