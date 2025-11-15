@@ -26,7 +26,7 @@ data = {
     "adhd": False,
     "dyslexia": False,
     "hard": None,
-    "obstacles": {},
+    "obstacles": set(),
     "font_size": 18,
     "line_space": 1.60,
     "letter_space": 0.02,
