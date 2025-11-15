@@ -480,6 +480,7 @@ def get_texts(lang):
             "example_texts": "ఉదాహరణ వచనాలు",
             "which_one_easier": "ఏది సులభంగా ఉంది?",
         }
+    
 if "audio_rate" not in st.session_state:
     st.session_state.audio_rate = 1.0
 
