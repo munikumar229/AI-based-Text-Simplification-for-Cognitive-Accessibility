@@ -8,6 +8,8 @@ import streamlit as st
 import regex
 import sqlite3
 import base64
+import json
+import time
 
 # Import backend functions
 from backend import simplify_text_with_nlp, generate_tts_audio
@@ -37,7 +39,10 @@ data = {
 
 
 
+
+
 def init_db():
+
     conn = sqlite3.connect('user_data.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS user_selections (user TEXT, page TEXT, selected TEXT, PRIMARY KEY(user, page))''')
@@ -321,6 +326,7 @@ for key, default in {
     "audio_rate": 1.0,
     "show_comparison": False,
     "desired_word_count": 120,  # New: user-controlled word count
+    "desired_word_count1": 120,  # New: user-controlled word count
     "bold_letters": False,  # For bolding letters feature
     "color_letters": False,  # For coloring letters feature
     "tts_autoplay": False,  # TTS autoplay on result
@@ -329,6 +335,8 @@ for key, default in {
     "assist_on": True,  # Reading assists enabled
     "bold_first_n": 2,  # Bold first N graphemes
     "char_assist": True,  # Telugu character assists
+    "text_processing_time": None,
+    "audio_processing_time": None
 }.items():
     if key not in st.session_state:
         st.session_state[key] = default
@@ -502,7 +510,7 @@ if "audio_version" not in st.session_state:
 # ------------------------------
 def page_login():
     data["user"] = "guest"
-
+    print("guest")
     st.markdown("""
         <style>
         .login-container {
@@ -821,11 +829,14 @@ def page_language():
             flex-wrap: wrap;
             margin-top: 60px;
         }
-
+        .stButton{
+            width: 344px;
+        }
         /* Common button styles for both cards */
-        div[data-testid="stButton"] > button {
+        .st-key-telugu_btn div button,
+        .st-key-english_btn div button {
             height: 220px !important;
-            width: 220px !important;
+            width: 100% !important;
             border-radius: 20px !important;
             background-color: #EDE9FE !important;
             border: none !important;
@@ -841,7 +852,6 @@ def page_language():
             align-items: center !important;       /* ADDED */
             justify-content: center !important;
             margin: 0 !important;                 /* ADDED */
-            width: 100% !important;               /* ADDED */
             text-align: center !important;
             
         }
@@ -882,11 +892,7 @@ def page_language():
             background-color: #DDD6FE !important;
             box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
         }
-        .lang-wrapper {
-            display: flex;
-            justify-content: center;   /* center horizontally */
-            margin-top: 5px;
-        }
+
         /* Language label under the box */
         .lang-name {
             text-align: center;
@@ -925,15 +931,8 @@ def page_language():
             st.session_state.lang = "English"
             st.session_state.page = "login"
             st.rerun()
-
-        st.markdown(
-            f"""
-            <div class="lang-wrapper">
-                <div class="lang-name">{t['english_label']}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        
+        st.markdown(f"<div class='lang-name'>{t['english_label']}</div>", unsafe_allow_html=True)
 
     with col2:
         if st.button("త", key="telugu_btn"):
@@ -941,15 +940,9 @@ def page_language():
             st.session_state.lang = "తెలుగు"
             st.session_state.page = "login_telugu"
             st.rerun()
+        
+        st.markdown(f"<div class='lang-name'>{t['telugu_label']}</div>", unsafe_allow_html=True)
 
-        st.markdown(
-            f"""
-            <div class="lang-wrapper">
-                <div class="lang-name">{t['telugu_label']}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
 
 def page_questionnaire():
     print(data["font_size"], data["line_space"], data["letter_space"])
@@ -1183,6 +1176,7 @@ def page_bold_examples():
             text-align: center;
             word-break: break-word;
             white-space: pre-wrap;
+            font-size:28px;
         }
 
         .stButton > button {
@@ -1329,6 +1323,7 @@ def page_spacing_examples():
             text-align: center;
             word-break: break-word;
             white-space: pre-wrap;
+            font-size:30px;
         }
 
         .stButton > button {
@@ -1543,7 +1538,7 @@ def page_input():
     col_word_settings = st.columns([2, 1])
     
     with col_word_settings[0]:
-        st.slider(
+        count = st.slider(
             t["word_count_label"], 
             50, 300, 
             st.session_state.desired_word_count, 
@@ -1551,9 +1546,11 @@ def page_input():
             help=t["word_count_help"],
             key="input_word_count_slider"
         )
-    
+
+    st.session_state.desired_word_count = count
+
     with col_word_settings[1]:
-        st.markdown(f"**{t['target_words'].format(count=st.session_state.desired_word_count)}**")
+        st.markdown(f"**{t['target_words'].format(count=count)}**")
         st.caption(t["approx_length"])
 
     # # Simplification Options
@@ -1581,7 +1578,7 @@ def page_input():
 def page_processing():
     t = get_texts(st.session_state.lang)
     st.markdown(f"### {t['processing']}")
-    
+    prev = time.time()
     # Progress stages
     stages = ["Uploading", "Analyzing", "Simplifying", "Applying preferences", "Finalizing"]
     progress_bar = st.progress(0)
@@ -1600,10 +1597,48 @@ def page_processing():
     st.session_state.simplified = simplify_text_with_nlp(
         st.session_state.text_input,
         target_language=target_lang,
-        target_words=st.session_state.desired_word_count,
+        target_words=st.session_state.input_word_count_slider,
     )
     st.session_state.page = "result"
+    cur = time.time()
+    total_time = cur - prev
+    st.session_state.text_processing_time = total_time
     st.rerun()
+
+
+def page_record():
+    with open("database.json", "r") as f:
+        record = json.load(f)
+
+    new_record = {
+        "lang": st.session_state.lang,
+        "user": st.session_state.user,
+        "adhd": st.session_state.adhd,
+        "dyslexia": st.session_state.dyslexia,
+        "hard": st.session_state.harder,
+        "obstacles": st.session_state.obstacles,
+        "font_size": st.session_state.font_size,
+        "line_space": st.session_state.line_height,
+        "letter_space": st.session_state.letter_spacing,
+        "input_mode": st.session_state.input_mode,
+        "target_words": st.session_state.input_word_count_slider,
+        "input_text": st.session_state.text_input,
+        "summary": st.session_state.simplified,
+        "text_processing_time": st.session_state.text_processing_time,
+        "audio_processing_time": st.session_state.audio_processing_time
+    }
+    
+    print(page_record)
+
+    # Append to list
+    record.append(new_record)
+
+    # Save back to file
+    with open("database.json", "w") as f:
+        json.dump(record, f, indent=4)
+    
+    page_welcome()
+
 
 def page_result():
     t = get_texts(st.session_state.lang)
@@ -1636,27 +1671,28 @@ def page_result():
             st.session_state.theme = "Dark"
             st.rerun()
 
-    # --- Bold Letters Toggle ---
-    if st.button("🔤 Bold Vowels" if not st.session_state.bold_letters else "🔤 Normal Text", use_container_width=True):
-        st.session_state.bold_letters = not st.session_state.bold_letters
-        st.rerun()
+    # # --- Bold Letters Toggle ---
+    # if st.button("🔤 Bold Vowels" if not st.session_state.bold_letters else "🔤 Normal Text", use_container_width=True):
+    #     st.session_state.bold_letters = not st.session_state.bold_letters
+    #     st.rerun()
 
-    # --- Color Letters Toggle ---
-    if st.button("🎨 Color Letters" if not st.session_state.color_letters else "🎨 Normal Colors", use_container_width=True):
-        st.session_state.color_letters = not st.session_state.color_letters
-        st.rerun()
+    # # --- Color Letters Toggle ---
+    # if st.button("🎨 Color Letters" if not st.session_state.color_letters else "🎨 Normal Colors", use_container_width=True):
+    #     st.session_state.color_letters = not st.session_state.color_letters
+    #     st.rerun()
+
+  
+    
 
     # --- Reading Assists ---
     st.markdown("### 📖 Reading Assists")
-    st.checkbox("Enable reading assists (bold first varṇa)", value=st.session_state.assist_on, key="assist_on")
     if st.session_state.assist_on:
-        st.slider("Bold first varṇa", 1, 3, st.session_state.bold_first_n, key="bold_first_n")
-        if st.session_state.lang == "తెలుగు":
-            st.checkbox("Telugu character assists", value=st.session_state.char_assist, key="char_assist")
+        st.slider("Bold first varṇa", 0, 3, st.session_state.bold_first_n, key="bold_first_n")
 
     # --- Simplified Text Display ---
     display_text = simplified
-    
+    st.session_state.assist_on = True
+    st.session_state.char_assist = True
     # Apply reading assists first (to plain text)
     opts = {
         'assist_on': st.session_state.assist_on,
@@ -1664,6 +1700,8 @@ def page_result():
         'char_assist': st.session_state.char_assist
     }
     display_text = render_assistive_text(display_text, st.session_state.lang, opts)
+    
+
     
     if st.session_state.color_letters:
         import re
@@ -1775,11 +1813,16 @@ def page_result():
     with col_audio:
         if st.button(f"🔊 {t['play_audio']}", use_container_width=True):
             try:
+                start_time = time.time()
+
                 audio_file = generate_tts_audio(
                     simplified,
                     lang='en' if st.session_state.lang == "English" else 'te',
                     speed=st.session_state.audio_rate,
                 )
+
+                end_time = time.time()
+                st.session_state.audio_processing_time = end_time - start_time
                 # New audio, so update bytes and version
                 st.session_state.audio_bytes = audio_file.getvalue()
                 st.session_state.audio_action = "play"
@@ -1950,24 +1993,26 @@ def page_result():
             new_word_count = st.slider(
                 t["word_count_label"], 
                 50, 300, 
-                st.session_state.desired_word_count, 
+                st.session_state.desired_word_count1, 
                 step=10,
                 help=t["adjust_word_count"],
                 key="word_count_slider"
             )
             
             # Update desired word count
-            if new_word_count != st.session_state.desired_word_count:
-                st.session_state.desired_word_count = new_word_count
+            st.session_state.input_word_count_slider = st.session_state.desired_word_count
+
+            if new_word_count != st.session_state.input_word_count_slider:
+                st.session_state.input_word_count_slider = new_word_count
             
             # Show current word count
             current_words = len(simplified.split())
-            st.caption(t["current_word_count"].format(current=current_words, target=st.session_state.desired_word_count))
+            st.caption(t["current_word_count"].format(current=current_words, target=st.session_state.input_word_count_slider))
             
             # Re-simplify button
             if st.button(f"🔄 {t['resimplify_button']}", use_container_width=True, key="resimplify_btn"):
                 st.session_state.page = "processing"
-                st.session_state.summary_len = st.session_state.desired_word_count
+                st.session_state.summary_len = st.session_state.input_word_count_slider
                 st.rerun()
 
     col1, col2= st.columns(2)
@@ -1977,7 +2022,7 @@ def page_result():
             st.rerun()
     with col2:
         if st.button(t["home"], use_container_width=True):
-            st.session_state.page = "language"
+            st.session_state.page = "page_record"
             st.rerun()
 
 # ------------------------------
@@ -2009,3 +2054,5 @@ elif st.session_state.page == "result":
     page_result()
 elif st.session_state.page == "login_telugu":
     page_telugu_login()
+elif st.session_state.page == "page_record":
+    page_record()
