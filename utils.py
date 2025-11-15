@@ -1,3 +1,8 @@
+
+import os
+os.environ["TRANSFORMERS_NO_TF"] = "1"
+os.environ["USE_TF"] = "0"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 from rouge_score import rouge_scorer
 import json
 from bert_score import score
@@ -21,7 +26,13 @@ print(f"Precision: {avg_precision:.4f}")
 print(f"Recall:    {avg_recall:.4f}")
 print(f"F1-score:  {avg_fmeasure:.4f}")
 
-P, R, F1 = score(hypotheses, references, lang="en", verbose=True)
+P, R, F1 = score(
+    hypotheses,
+    references,
+    model_type="xlm-roberta-large",
+    verbose=True
+)
+
 
 print("\n📌 BERTScore (mean):")
 print(f"Precision: {P.mean().item():.4f}")

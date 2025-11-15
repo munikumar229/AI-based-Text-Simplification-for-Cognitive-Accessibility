@@ -817,7 +817,11 @@ def page_language():
             background-color: #DDD6FE !important;
             box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
         }
-
+        .lang-wrapper {
+            display: flex;
+            justify-content: center;   /* center horizontally */
+            margin-top: 5px;
+        }
         /* Language label under the box */
         .lang-name {
             text-align: center;
@@ -856,8 +860,15 @@ def page_language():
             st.session_state.lang = "English"
             st.session_state.page = "login"
             st.rerun()
-        
-        st.markdown(f"<div class='lang-name'>{t['english_label']}</div>", unsafe_allow_html=True)
+
+        st.markdown(
+            f"""
+            <div class="lang-wrapper">
+                <div class="lang-name">{t['english_label']}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     with col2:
         if st.button("త", key="telugu_btn"):
@@ -865,9 +876,15 @@ def page_language():
             st.session_state.lang = "తెలుగు"
             st.session_state.page = "login_telugu"
             st.rerun()
-        
-        st.markdown(f"<div class='lang-name'>{t['telugu_label']}</div>", unsafe_allow_html=True)
 
+        st.markdown(
+            f"""
+            <div class="lang-wrapper">
+                <div class="lang-name">{t['telugu_label']}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
 def page_questionnaire():
     print(data["font_size"], data["line_space"], data["letter_space"])
