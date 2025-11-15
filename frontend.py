@@ -18,6 +18,25 @@ from backend import simplify_text_with_nlp, generate_tts_audio
 # ------------------------------
 # Database Functions
 # ------------------------------
+
+
+data = {
+    "lang": "english",
+    "user": "guest",
+    "adhd": False,
+    "dyslexia": False,
+    "hard": None,
+    "obstacles": {},
+    "font_size": 18,
+    "line_space": 1.60,
+    "letter_space": 0.02,
+    "input": "",
+    "target_words": 120,
+    "summary": ""
+}
+
+
+
 def init_db():
     conn = sqlite3.connect('user_data.db')
     c = conn.cursor()
@@ -380,6 +399,7 @@ def get_texts(lang):
             "word_count_help": "Set the desired number of words in the simplified text",
             "adjust_word_count": "Adjust the number of words in the simplified text",
             "example_texts": "Example Texts",
+            "which_one_easier": "Which one is easier?",
         }
 
     else:
@@ -450,6 +470,7 @@ def get_texts(lang):
             "word_count_help": "సరళీకృత పాఠ్యంలో కావలసిన పదాల సంఖ్యను సెట్ చేయండి",
             "adjust_word_count": "సరళీకృత పాఠ్యంలో పదాల సంఖ్యను సర్దుబాటు చేయండి",
             "example_texts": "ఉదాహరణ వచనాలు",
+            "which_one_easier": "ఏది సులభంగా ఉంది?",
         }
 if "audio_rate" not in st.session_state:
     st.session_state.audio_rate = 1.0
@@ -471,6 +492,8 @@ if "audio_version" not in st.session_state:
 # Pages
 # ------------------------------
 def page_login():
+    data["user"] = "guest"
+
     st.markdown("""
         <style>
         .login-container {
@@ -543,15 +566,20 @@ def page_login():
     with col1:
         if st.button("Login", use_container_width=True):
             if username.strip():
+                data["user"] = username.strip()
                 st.session_state.user = username.strip()
-                st.session_state.page = "examples"
+                st.session_state.page = "bold_examples"
+                print(data["user"])
                 st.rerun()
             else:
+                data["user"] = "guest"
                 st.error("Please enter a name.")
     with col2:
         if st.button("Continue as Guest", use_container_width=True):
+            data["user"] = "guest"
             st.session_state.user = "guest"
-            st.session_state.page = "examples"
+            st.session_state.page = "bold_examples"
+            print(data["user"])
             st.rerun()
 
 def page_telugu_login():
@@ -626,17 +654,18 @@ def page_telugu_login():
         if st.button("లాగిన్ అవ్వండి", use_container_width=True):
             if username.strip():
                 st.session_state.user = username.strip()
-                st.session_state.page = "examples"
+                st.session_state.page = "bold_examples"
                 st.rerun()
             else:
                 st.error("దయచేసి మీ పేరు ఎంటర్ చేయండి")
     with col2:
         if st.button("గెస్ట్‌గా కొనసాగండి", use_container_width=True):
             st.session_state.user = "guest"
-            st.session_state.page = "examples"
+            st.session_state.page = "bold_examples"
             st.rerun()
 
 def page_welcome():
+    
     # Custom CSS styling for centering + button
     st.markdown("""
         <style>
@@ -704,6 +733,7 @@ def page_welcome():
 
 
 def page_language():
+    data["lang"] = "english"
     t = get_texts("English")  # Default to English for language selection page
 
     # ---------------- CSS Styling ----------------
@@ -813,6 +843,7 @@ def page_language():
 
     with col1:
         if st.button("E", key="english_btn"):
+            data["lang"] = "english"
             st.session_state.lang = "English"
             st.session_state.page = "login"
             st.rerun()
@@ -821,6 +852,7 @@ def page_language():
 
     with col2:
         if st.button("త", key="telugu_btn"):
+            data["lang"] = "తెలుగు"
             st.session_state.lang = "తెలుగు"
             st.session_state.page = "login_telugu"
             st.rerun()
@@ -829,6 +861,7 @@ def page_language():
 
 
 def page_questionnaire():
+    print(data["font_size"], data["line_space"], data["letter_space"])
     t = get_texts(st.session_state.lang)
 
     # ------------------- CSS Styling -------------------
@@ -910,6 +943,7 @@ def page_questionnaire():
         st.markdown(f"<div class='{css_class}'>", unsafe_allow_html=True)
         if st.button(("✅ " if selected else "") + t["reading"], key="reading_btn", use_container_width=True):
             st.session_state.harder = t["reading"]
+            data["hard"] = t["reading"]
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
     with col2:
@@ -917,6 +951,7 @@ def page_questionnaire():
         css_class = "harder-btn selected" if selected else "harder-btn"
         st.markdown(f"<div class='{css_class}'>", unsafe_allow_html=True)
         if st.button(("✅ " if selected else "") + t["understanding"], key="understanding_btn", use_container_width=True):
+            data["hard"] = t["understanding"]
             st.session_state.harder = t["understanding"]
             st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
@@ -958,8 +993,11 @@ def page_questionnaire():
                 st.markdown(f"<div class='{css_class}'>", unsafe_allow_html=True)
                 if st.button(("✅ " if selected else "") + label, key=f"{key}_btn", use_container_width=True):
                     if selected:
+                        if key in data["obstacles"]:
+                            data["obstacles"].remove(key)
                         st.session_state.obstacles.remove(key)
                     else:
+                        data["obstacles"].add(key)
                         st.session_state.obstacles.append(key)
                     st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -975,9 +1013,15 @@ def page_questionnaire():
     with colC:
         st.slider(t["letter_spacing_label"], 0.0, 0.3, st.session_state.letter_spacing, step=0.01, key="prefs_letter_spacing")
 
+
+    data["font_size"] = st.session_state.font_size
+    data["line_space"] = st.session_state.line_height
+    data["letter_space"] = st.session_state.letter_spacing
+
+
     # TTS Autoplay
-    st.markdown("**🔊 TTS Autoplay**")
-    st.checkbox("Read aloud automatically on results screen", value=st.session_state.tts_autoplay, key="tts_autoplay_checkbox")
+    # st.markdown("**🔊 TTS Autoplay**")
+    # st.checkbox("Read aloud automatically on results screen", value=st.session_state.tts_autoplay, key="tts_autoplay_checkbox")
 
     # ------------------- Section 4: Navigation -------------------
     st.divider()
@@ -991,14 +1035,15 @@ def page_questionnaire():
             st.session_state.page = "input"
             st.rerun()
 
-import regex  # safer than re for Unicode grapheme support
 
-def page_examples():
+
+def page_bold_examples():
     t = get_texts(st.session_state.lang)
+    data["adhd"] = False
 
     # Load selection from DB
     if "selected_example" not in st.session_state:
-        st.session_state.selected_example = load_user_selection(st.session_state.user, "examples")
+        st.session_state.selected_example = load_user_selection(st.session_state.user, "bold_examples")
 
     # ------------------- CSS Styling -------------------
     st.markdown("""
@@ -1067,14 +1112,14 @@ def page_examples():
         else "వంద బోధనే తుమ్హి రాజు శాసనే రాష్ట్రం ప్రజల ప్రియమే"
     )
 
-    st.markdown(f"<h3>{t.get('Which one is easier ? ', 'ఏది సులభంగా ఉంది?')}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3>{t['which_one_easier']}</h3>", unsafe_allow_html=True)
 
     # Allow selection via query param: ?examples=left or ?examples=right
     if "examples" in st.query_params:
         sel = st.query_params["examples"]
         if sel:
             st.session_state.selected_example = sel
-            save_user_selection(st.session_state.user, "examples", sel)
+            save_user_selection(st.session_state.user, "bold_examples", sel)
         # clear the param so repeated clicks still work
         st.query_params.clear()
         # rerun to update visual state
@@ -1098,6 +1143,7 @@ def page_examples():
     col1, col2 = st.columns(2)
     with col1:
         if st.button(example_text, key="normal_btn"):
+            data["adhd"] = False
             st.session_state.adhd = False
             st.session_state.page = "spacing_examples"
             st.rerun()
@@ -1105,6 +1151,7 @@ def page_examples():
  
     with col2:
         if st.button(bolded_text, key="bold_btn"):
+            data["adhd"] = True
             st.session_state.adhd = True
             st.session_state.page = "spacing_examples"
             st.rerun()
@@ -1138,6 +1185,7 @@ def page_examples():
 
 def page_spacing_examples():
     t = get_texts(st.session_state.lang)
+    data["dyslexia"] = False
 
     # Load selection from DB
     if "selected_spacing_example" not in st.session_state:
@@ -1214,7 +1262,7 @@ def page_spacing_examples():
 
     spaced_text = add_spacing(example_text)
 
-    st.markdown(f"<h3>{t.get('Which one is easier', 'ఏది సులభంగా ఉంది?')}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3>{t['which_one_easier']}</h3>", unsafe_allow_html=True)
 
     # Allow selection via query param: ?spacing_examples=left or ?spacing_examples=right
     if "spacing_examples" in st.query_params:
@@ -1231,6 +1279,7 @@ def page_spacing_examples():
     col1, col2 = st.columns(2)
     with col1:
         if st.button(example_text, key="normal_btn"):
+            data["dyslexia"] = False
             st.session_state.dyslexia = False
             st.session_state.page = "questionnaire"
             st.rerun()
@@ -1238,6 +1287,7 @@ def page_spacing_examples():
  
     with col2:
         if st.button(spaced_text, key="space_btn"):
+            data["dyslexia"] = True
             st.session_state.dyslexia = True
             st.session_state.page = "questionnaire"
             st.rerun()
@@ -1248,7 +1298,7 @@ def page_spacing_examples():
     col1, col2 = st.columns(2)
     with col1:
         if st.button(t["back"], use_container_width=True):
-            st.session_state.page = "examples"
+            st.session_state.page = "bold_examples"
             st.rerun()
     # with col2:
     #     if st.button(t["next"], use_container_width=True):
@@ -1415,17 +1465,17 @@ def page_input():
         st.markdown(f"**{t['target_words'].format(count=st.session_state.desired_word_count)}**")
         st.caption(t["approx_length"])
 
-    # Simplification Options
-    st.divider()
-    st.markdown("**🛠️ Simplification Options**")
-    col_opts = st.columns(2)
-    with col_opts[0]:
-        st.checkbox("Simplify vocabulary", value=st.session_state.opt_simplify_vocab, key="opt_simplify_vocab")
-    with col_opts[1]:
-        st.checkbox("Split long sentences", value=st.session_state.opt_split_long, key="opt_split_long")
+    # # Simplification Options
+    # st.divider()
+    # st.markdown("**🛠️ Simplification Options**")
+    # col_opts = st.columns(2)
+    # with col_opts[0]:
+    #     st.checkbox("Simplify vocabulary", value=st.session_state.opt_simplify_vocab, key="opt_simplify_vocab")
+    # with col_opts[1]:
+    #     st.checkbox("Split long sentences", value=st.session_state.opt_split_long, key="opt_split_long")
 
     # ------------- Navigation buttons -------------
-    st.divider()
+    # st.divider()
     col1, col2 = st.columns(2)
     with col1:
         if st.button(t["back"], use_container_width=True, key="input_back_btn"):
@@ -1807,16 +1857,12 @@ def page_result():
                 st.session_state.summary_len = st.session_state.desired_word_count
                 st.rerun()
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2= st.columns(2)
     with col1:
         if st.button(t["back"], use_container_width=True):
             st.session_state.page = "input"
             st.rerun()
     with col2:
-        if st.button("🔄 Start Over", use_container_width=True):
-            st.session_state.page = "language"
-            st.rerun()
-    with col3:
         if st.button(t["home"], use_container_width=True):
             st.session_state.page = "language"
             st.rerun()
@@ -1838,8 +1884,8 @@ elif st.session_state.page == "language":
     page_language()
 elif st.session_state.page == "questionnaire":
     page_questionnaire()
-elif st.session_state.page == "examples":
-    page_examples()
+elif st.session_state.page == "bold_examples":
+    page_bold_examples()
 elif st.session_state.page == "spacing_examples":
     page_spacing_examples()
 elif st.session_state.page == "input":
