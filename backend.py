@@ -213,22 +213,44 @@ def _create_noun_preserving_summary(text, key_nouns, target_words, is_telugu):
     return summary
 
 def _basic_summarize_text(text, target_words):
+    """LLM-based abstractive summarization with graceful fallback.
+    Attempts to use a Hugging Face summarization pipeline; if unavailable,
+    falls back to previous simple extractive logic.
     """
-    Basic extractive summarization - take first part of text
-    """
+    if not text or not text.strip():
+        return ""
+    try:
+        from transformers import pipeline
+        global _summarizer
+        try:
+            _summarizer
+        except NameError:
+            # Load a widely used summarization model.
+            _summarizer = pipeline("summarization", model="facebook/bart-large-cnn",device='cuda')
+
+        # Heuristic lengths (pipeline works in tokens, but we approximate via words).
+        min_len = max(5, int(target_words * 0.5))
+        max_len = max(min_len + 5, int(target_words * 1.2))
+        max_len = min(1024, max_len)
+        summary_output = _summarizer(text, min_length=min_len, max_length=max_len, do_sample=False)
+        if isinstance(summary_output, list) and summary_output:
+            candidate = summary_output[0].get("summary_text", "").strip()
+            if candidate:
+                return candidate
+        # If pipeline returns nothing meaningful, fall through to fallback.
+    except Exception as e:
+        pass
+        print(e)
+        print('Falling back To simple logic')
+    # Fallback: original simple extractive summarization.
     words = text.split()
     if len(words) <= target_words:
         return text
-
-    # Take first target_words words
     summary_words = words[:target_words]
-
-    # Try to end at sentence boundary if possible
     summary = ' '.join(summary_words)
-    last_sentence_end = max(summary.rfind('.'), summary.rfind('!'), summary.rfind('?'))
-    if last_sentence_end > len(summary) * 0.5:  # If sentence end is in latter half
-        summary = summary[:last_sentence_end + 1]
-
+    # last_sentence_end = max(summary.rfind('.'), summary.rfind('!'), summary.rfind('?'))
+    # if last_sentence_end > len(summary) * 0.5:
+    #     summary = summary[:last_sentence_end + 1]
     return summary
 
 def _basic_simplify_text(txt, simplify_vocab=True, split_sentences=True, target_words=100):
