@@ -222,7 +222,6 @@ def simplify_text(txt, simplify_vocab=True, split_sentences=True, target_words=1
             txt = txt.replace(k, v)
     words = txt.split()
     return " ".join(words[:target_words]) + ("..." if len(words) > target_words else "")
-
 def render_audio_player():
     """Render a hidden HTML5 audio element controlled via JS & remember position."""
     if st.session_state.audio_bytes is None:
@@ -232,6 +231,7 @@ def render_audio_player():
     version = st.session_state.audio_version
     action = st.session_state.audio_action  # "play" / "pause" / "stop"
     muted = "true" if st.session_state.audio_muted else "false"
+    rate = float(st.session_state.audio_rate)
 
     components.html(
         f"""
@@ -240,10 +240,15 @@ def render_audio_player():
             const currentVersion = {version};
             const action = "{action}";
             const muted = {muted};
+            const rate = {rate};
 
             function initTtsAudio() {{
                 const audio = document.getElementById("ttsAudio");
                 if (!audio) return;
+
+                // Set playback rate & mute every render
+                audio.playbackRate = rate;
+                audio.muted = muted;
 
                 // Load previous state from localStorage
                 let state;
@@ -257,8 +262,6 @@ def render_audio_player():
                 if (state.version !== currentVersion) {{
                     state = {{ position: 0, version: currentVersion }};
                 }}
-
-                audio.muted = muted;
 
                 audio.addEventListener("loadedmetadata", function() {{
                     // Restore previous position if we have one
@@ -287,11 +290,14 @@ def render_audio_player():
                 }});
             }}
 
+            // Run immediately
             initTtsAudio();
         </script>
         """,
         height=0,
     )
+
+
 
 
 
@@ -1676,7 +1682,9 @@ def page_result():
     #             st.session_state.audio_rate = min(2.0, st.session_state.audio_rate + 0.1)
     #             st.rerun()
     # Audio and Download buttons side by side
-    # Audio and Download buttons side by side
+
+
+
     col_audio, col_download, col_copy = st.columns(3)
 
     with col_audio:
