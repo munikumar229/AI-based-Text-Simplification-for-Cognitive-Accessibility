@@ -345,4 +345,3 @@ def generate_tts_audio(text, lang='en', speed=1.0):
         return audio_file
     except Exception as e:
         raise Exception(f"TTS generation failed: {e}")
-

@@ -10,6 +10,7 @@ import sqlite3
 import base64
 import json
 import time
+import os
 
 # Import backend functions
 from backend import simplify_text_with_nlp, generate_tts_audio
@@ -1607,8 +1608,32 @@ def page_processing():
 
 
 def page_record():
-    with open("database.json", "r") as f:
-        record = json.load(f)
+    db_path = "database.json"
+
+    # Load existing records safely. If the file does not exist, is empty,
+    # or contains invalid JSON, start with an empty list. If the file is
+    # corrupt, rename it to preserve contents for manual inspection.
+    record = []
+    if os.path.exists(db_path):
+        try:
+            with open(db_path, "r") as f:
+                content = f.read()
+                if content.strip():
+                    record = json.loads(content)
+                else:
+                    record = []
+        except json.JSONDecodeError:
+            # Preserve the corrupt file for debugging and continue with an empty list
+            try:
+                corrupt_path = f"{db_path}.corrupt.{int(time.time())}"
+                os.rename(db_path, corrupt_path)
+            except Exception:
+                # If we can't rename, ignore and continue — we don't want to block the user
+                pass
+            record = []
+        except Exception:
+            # Any other IO errors -> continue with empty record to avoid crashing
+            record = []
 
     new_record = {
         "lang": st.session_state.lang,
@@ -1634,8 +1659,14 @@ def page_record():
     record.append(new_record)
 
     # Save back to file
-    with open("database.json", "w") as f:
-        json.dump(record, f, indent=4)
+    try:
+        with open(db_path, "w") as f:
+            json.dump(record, f, indent=4)
+    except Exception as e:
+        # If we fail to write the file, log and continue showing the welcome page.
+        # Streamlit's st.error can't be used here because page_record may be called
+        # during a rerun; printing to console is safer for debugging.
+        print(f"Warning: failed to write {db_path}: {e}")
     
     page_welcome()
 
