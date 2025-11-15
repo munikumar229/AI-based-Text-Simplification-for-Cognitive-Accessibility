@@ -9,7 +9,12 @@ dependencies:
   - stanza
   - gtts
   - pydub
+  - pyttsx3
 
   - pip
   - pip:
       - re
+      - bert_score
+      - rouge-score
+      - wrapt
+      - gast
