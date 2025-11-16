@@ -275,3 +275,6 @@ dependencies:
   - pip:
       - pyttsx3==2.99
       - streamlit==1.40.1
+      - kiwisolver==1.4.7
+      - cycler==0.12.1
+      - pyparsing==3.1.4
