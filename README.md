@@ -15,6 +15,10 @@ A multilingual web application that simplifies text to improve cognitive accessi
 🎵 **Audio Controls**: Play/pause functionality with speed adjustment (0.25x to 2.0x)  
 💾 **Persistent Settings**: User preferences saved across sessions
 
+## 🎥 Demo
+
+Watch a live demo of the application in action: [Demo Video](https://github.com/user-attachments/assets/4071a726-bf71-4d6f-ab0f-7e195b7d9d55)
+
 ## 🛠️ Technology Stack
 
 - **Framework**: Streamlit 1.40.1
