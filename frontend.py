@@ -68,7 +68,7 @@ def load_user_selection(user, page):
 
 
 # Initialize DB
-init_db()
+# init_db()
 
 # ------------------------------
 # Assistive Rendering Functions
