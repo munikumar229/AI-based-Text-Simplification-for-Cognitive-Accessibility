@@ -55,7 +55,7 @@ cd AI-based-Text-Simplification-for-Cognitive-Accessibility
 
 ```bash
 # Create and activate conda environment
-conda env create -f environment.yml
+conda env create -f config/requirements.yml
 conda activate text-simplifier
 
 # Install additional pip dependencies (required for transformers compatibility)
@@ -78,11 +78,11 @@ pip install streamlit==1.40.1 transformers stanza gtts pydub pyttsx3 gast opt_ei
 ```bash
 # Using conda environment
 conda activate text-simplifier
-~/.conda/envs/text-simplifier/bin/streamlit run frontend.py
+~/.conda/envs/text-simplifier/bin/streamlit run src/frontend.py
 
 # Or using pip environment
 source text-simplifier-env/bin/activate
-streamlit run frontend.py
+streamlit run src/frontend.py
 ```
 
 The application will open at `http://localhost:8501`. On first run, it will automatically download required ML models (~2GB total), which may take 5-10 minutes.
@@ -105,19 +105,28 @@ The application will open at `http://localhost:8501`. On first run, it will auto
 ## 📁 Project Structure
 
 ```
-├── frontend.py              # Main Streamlit application with UI
-├── backend.py               # NLP and TTS processing functions
-├── utils.py                 # Utility functions
-├── requirements.yml         # Conda environment specification
-├── database.json            # User data storage (created at runtime)            
-├── HCI_project_LLM.ipynb    # Research notebook with AI models
-├── Design_Process/          # Design documentation and prototypes
-├── Low-Fi-Prototype/        # Early prototype files
-├── 1.html                   # Static HTML demonstration files
-├── text-simplifier-woz-v3.html
-├── logo_hci.png             # Application logo
-├── welcome.png              # Welcome page background
-├── user_study.csv           # Research data
+├── src/                    # Main application code
+│   ├── frontend.py         # Main Streamlit application with UI
+│   ├── backend.py          # NLP and TTS processing functions
+│   └── utils.py            # Utility functions
+├── assets/                 # Static assets and images
+│   ├── logo_hci.png        # Application logo
+│   └── welcome.png         # Welcome page background
+├── data/                   # Data files and databases
+│   ├── database.json       # User data storage (created at runtime)
+│   └── user_study.csv      # Research data
+├── research/               # Research materials and documentation
+│   ├── HCI_project_LLM.ipynb    # Research notebook with AI models
+│   ├── Design_Process/     # Design documentation and prototypes
+│   ├── Low-Fi-Prototype/   # Early prototype files
+├── demos/                  # HTML demonstrations and examples
+│   ├── 1.html              # Static HTML demonstration files
+│   └── text-simplifier-woz-v3.html
+├── config/                 # Configuration files
+│   └── requirements.yml    # Conda environment specification
+├── README.md               # This file
+└── .gitignore              # Git ignore patterns
+└── HiFi_Report.pdf     # High-fidelity design report
 ```
 
 ## 📖 Usage
@@ -241,10 +250,10 @@ Models are cached locally in `~/.cache/huggingface/` and `~/.cache/stanza/`.
 
 ```bash
 # Enable debug logging
-streamlit run frontend.py --logger.level=debug
+streamlit run src/frontend.py --logger.level=debug
 
 # Custom port and settings
-streamlit run frontend.py --server.port=8502 --server.headless=false
+streamlit run src/frontend.py --server.port=8502 --server.headless=false
 ```
 
 ### Testing Backend Functions
@@ -279,7 +288,7 @@ print(f"Generated audio: {len(audio.getvalue())} bytes")
 # Clear caches and retry
 rm -rf ~/.cache/huggingface ~/.cache/stanza
 conda activate text-simplifier  # or your environment
-streamlit run frontend.py
+streamlit run src/frontend.py
 ```
 
 **Memory Issues**:
@@ -297,7 +306,7 @@ streamlit run frontend.py
 # Clear Streamlit cache
 rm -rf ~/.streamlit
 streamlit cache clear
-streamlit run frontend.py
+streamlit run src/frontend.py
 ```
 
 **Database Issues**:
@@ -347,7 +356,7 @@ We welcome contributions to improve accessibility and add new features!
 
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/yourusername/AI-based-Text-Simplification-for-Cognitive-Accessibility.git`
-3. Set up the environment: `conda env create -f requirements.yml`
+3. Set up the environment: `conda env create -f config/requirements.yml`
 4. Create a feature branch: `git checkout -b feature/your-feature-name`
 5. Make your changes with proper testing
 6. Commit changes: `git commit -m 'Add: brief description of changes'`

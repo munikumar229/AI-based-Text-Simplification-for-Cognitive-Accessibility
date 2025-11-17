@@ -6,7 +6,6 @@ import io
 import streamlit.components.v1 as components
 import streamlit as st
 import regex
-import sqlite3
 import base64
 import json
 import time
@@ -42,33 +41,9 @@ data = {
 
 
 
-def init_db():
-
-    conn = sqlite3.connect('user_data.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS user_selections (user TEXT, page TEXT, selected TEXT, PRIMARY KEY(user, page))''')
-    conn.commit()
-    conn.close()
-
-def save_user_selection(user, page, sel):
-    conn = sqlite3.connect('user_data.db')
-    c = conn.cursor()
-    c.execute('INSERT OR REPLACE INTO user_selections (user, page, selected) VALUES (?, ?, ?)', (user, page, sel))
-    conn.commit()
-    conn.close()
-
-def load_user_selection(user, page):
-    conn = sqlite3.connect('user_data.db')
-    c = conn.cursor()
-    c.execute('SELECT selected FROM user_selections WHERE user=? AND page=?', (user, page))
-    row = c.fetchone()
-    conn.close()
-    return row[0] if row else None
 
 
 
-# Initialize DB
-# init_db()
 
 # ------------------------------
 # Assistive Rendering Functions
@@ -683,14 +658,15 @@ def page_telugu_login():
             st.rerun()
 
 def load_base64_image(path):
-    with open(path, "rb") as f:
+    # Convert relative path to absolute path from the script's directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    abs_path = os.path.join(script_dir, path)
+    with open(abs_path, "rb") as f:
         return base64.b64encode(f.read()).decode()
 
 
 def render_header():
-    logo64 = load_base64_image(
-        "/home/kaloori.shiva/AI-based-Text-Simplification-for-Cognitive-Accessibility/logo_hci.png"
-    )
+    logo64 = load_base64_image("../assets/logo_hci.png")
 
     html = f"""
     <div style="
@@ -728,9 +704,7 @@ def page_welcome():
     render_header()
 
     # Load the hero background as Base64
-    img64 = load_base64_image(
-        "/home/kaloori.shiva/AI-based-Text-Simplification-for-Cognitive-Accessibility/welcome.png"
-    )
+    img64 = load_base64_image("../assets/welcome.png")
     
 
     # CSS for hero wrapper
@@ -1126,10 +1100,6 @@ def page_bold_examples():
     t = get_texts(st.session_state.lang)
     data["adhd"] = False
 
-    # Load selection from DB
-    if "selected_example" not in st.session_state:
-        st.session_state.selected_example = load_user_selection(st.session_state.user, "bold_examples")
-
     # ------------------- CSS Styling -------------------
     st.markdown("""
         <style>
@@ -1205,7 +1175,6 @@ def page_bold_examples():
         sel = st.query_params["examples"]
         if sel:
             st.session_state.selected_example = sel
-            save_user_selection(st.session_state.user, "bold_examples", sel)
         # clear the param so repeated clicks still work
         st.query_params.clear()
         # rerun to update visual state
@@ -1272,10 +1241,6 @@ def page_bold_examples():
 def page_spacing_examples():
     t = get_texts(st.session_state.lang)
     data["dyslexia"] = False
-
-    # Load selection from DB
-    if "selected_spacing_example" not in st.session_state:
-        st.session_state.selected_spacing_example = load_user_selection(st.session_state.user, "spacing_examples")
 
     # ------------------- CSS Styling -------------------
     st.markdown("""
@@ -1356,7 +1321,6 @@ def page_spacing_examples():
         sel = st.query_params["spacing_examples"]
         if sel:
             st.session_state.selected_spacing_example = sel
-            save_user_selection(st.session_state.user, "spacing_examples", sel)
         st.query_params.clear()
         st.rerun()
 
@@ -1608,7 +1572,9 @@ def page_processing():
 
 
 def page_record():
-    db_path = "database.json"
+    # Get absolute path for database file
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    db_path = os.path.join(script_dir, "../data/database.json")
 
     # Load existing records safely. If the file does not exist, is empty,
     # or contains invalid JSON, start with an empty list. If the file is
