@@ -27,7 +27,6 @@ Watch a live demo of the application in action: [Demo Video](https://github.com/
 - **POS Tagging**: Stanza for Telugu morphological analysis
 - **Text-to-Speech**: gTTS with pydub for speed manipulation
 - **Translation**: Transformers library with pre-trained models
-- **Database**: SQLite for user preference persistence
 - **UI Components**: Streamlit with custom CSS styling
 
 ## 🚀 Quick Start
