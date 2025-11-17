@@ -34,43 +34,73 @@ Watch a live demo of the application in action: [Demo Video](https://github.com/
 
 ### Prerequisites
 
-- **Python 3.8+** and pip/conda
+- **Python 3.8+** and conda (recommended) or pip
 - **Git** for cloning the repository
 - **Internet connection** for downloading ML models (first run only)
 - **4GB+ RAM** recommended for NLP models
+- **CUDA-compatible GPU** (optional, for faster processing; CPU fallback available)
 
 ### Installation & Setup
 
-#### Option 1: Using Conda (Recommended)
+#### Step 1: Clone the Repository
 
 ```bash
-# Clone the repository
 git clone https://github.com/munikumar229/AI-based-Text-Simplification-for-Cognitive-Accessibility.git
 cd AI-based-Text-Simplification-for-Cognitive-Accessibility
+```
 
+#### Step 2: Set Up the Environment
+
+**Using Conda (Recommended):**
+
+```bash
 # Create and activate conda environment
 conda env create -f environment.yml
 conda activate text-simplifier
 
-# Run the application
-streamlit run frontend.py
+# Install additional pip dependencies (required for transformers compatibility)
+~/.conda/envs/text-simplifier/bin/pip install gast opt_einsum astunparse termcolor
 ```
 
-#### Option 2: Using pip
+**Using pip (Alternative):**
 
 ```bash
-# Clone the repository
-git clone https://github.com/munikumar229/AI-based-Text-Simplification-for-Cognitive-Accessibility.git
-cd AI-based-Text-Simplification-for-Cognitive-Accessibility
+# Create virtual environment (optional but recommended)
+python -m venv text-simplifier-env
+source text-simplifier-env/bin/activate  # On Windows: text-simplifier-env\Scripts\activate
 
 # Install dependencies
-pip install streamlit transformers stanza gtts pydub pyttsx3
+pip install streamlit==1.40.1 transformers stanza gtts pydub pyttsx3 gast opt_einsum astunparse termcolor
+```
 
-# Run the application
+#### Step 3: Run the Application
+
+```bash
+# Using conda environment
+conda activate text-simplifier
+~/.conda/envs/text-simplifier/bin/streamlit run frontend.py
+
+# Or using pip environment
+source text-simplifier-env/bin/activate
 streamlit run frontend.py
 ```
 
-The application will open at `http://localhost:8501` and automatically download required ML models on first use.
+The application will open at `http://localhost:8501`. On first run, it will automatically download required ML models (~2GB total), which may take 5-10 minutes.
+
+### Troubleshooting Setup Issues
+
+**CUDA/GPU Errors:**
+- The app automatically falls back to CPU if GPU is unavailable
+- If you encounter CUDA errors, the app is designed to continue with CPU processing
+
+**Missing Dependencies:**
+- Ensure all pip packages are installed as shown above
+- If using conda, use the environment's pip path: `~/.conda/envs/text-simplifier/bin/pip`
+
+**Model Download Issues:**
+- Ensure stable internet connection
+- Models are cached locally after first download
+- Clear cache with: `rm -rf ~/.cache/huggingface ~/.cache/stanza`
 
 ## 📁 Project Structure
 
@@ -78,15 +108,16 @@ The application will open at `http://localhost:8501` and automatically download 
 ├── frontend.py              # Main Streamlit application with UI
 ├── backend.py               # NLP and TTS processing functions
 ├── utils.py                 # Utility functions
-├── environment.yml          # Conda environment specification
-├── user_data.db            # SQLite database for user preferences
-├── database.json           # Alternative data storage
-├── HCI_project_LLM.ipynb   # Research notebook with AI models
-├── Design_Process/         # Design documentation and prototypes
-├── Low-Fi-Prototype/       # Early prototype files
-├── 1.html                  # Static HTML demonstration files
+├── requirements.yml         # Conda environment specification
+├── database.json            # User data storage (created at runtime)            
+├── HCI_project_LLM.ipynb    # Research notebook with AI models
+├── Design_Process/          # Design documentation and prototypes
+├── Low-Fi-Prototype/        # Early prototype files
+├── 1.html                   # Static HTML demonstration files
 ├── text-simplifier-woz-v3.html
-└── README.md               # This file
+├── logo_hci.png             # Application logo
+├── welcome.png              # Welcome page background
+├── user_study.csv           # Research data
 ```
 
 ## 📖 Usage
@@ -316,7 +347,7 @@ We welcome contributions to improve accessibility and add new features!
 
 1. Fork the repository
 2. Clone your fork: `git clone https://github.com/yourusername/AI-based-Text-Simplification-for-Cognitive-Accessibility.git`
-3. Set up the environment: `conda env create -f environment.yml`
+3. Set up the environment: `conda env create -f requirements.yml`
 4. Create a feature branch: `git checkout -b feature/your-feature-name`
 5. Make your changes with proper testing
 6. Commit changes: `git commit -m 'Add: brief description of changes'`
@@ -364,56 +395,3 @@ For questions, issues, or feature requests:
 ---
 
 **Built with ❤️ for cognitive accessibility and inclusive technology**
-
-## Troubleshooting
-
-### Common Issues
-
-**Model Download Failures**:
-```bash
-# Clear cache and retry
-rm -rf ~/.cache/huggingface
-streamlit run frontend.py
-```
-
-**TTS Audio Issues**:
-- Ensure FastSpeech2_HS is properly installed
-- App falls back to gTTS automatically
-- Check system audio permissions
-
-**Memory Issues**:
-- NLLB model requires ~2GB RAM
-- Use smaller models for constrained environments
-- Consider GPU acceleration for better performance
-
-**Streamlit Errors**:
-```bash
-# Clear Streamlit cache
-rm -rf ~/.streamlit
-streamlit run frontend.py
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/new-feature`)
-3. Make your changes
-4. Test thoroughly with different languages and inputs
-5. Commit your changes (`git commit -m 'Add new feature'`)
-6. Push to the branch (`git push origin feature/new-feature`)
-7. Open a Pull Request
-
-## Research Context
-
-This application was developed as part of a Human-Computer Interaction (HCI) research project focusing on cognitive accessibility. The `HCI_project_LLM.ipynb` notebook contains the original research and model development work.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Built for cognitive accessibility research
-- Supports users with reading difficulties and learning disabilities
-- Leverages state-of-the-art NLP models for multilingual text processing
-- Designed with inclusive technology principles
